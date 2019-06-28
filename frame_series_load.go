@@ -50,7 +50,10 @@ func LoadFrameSeries(path string) ([]chanim.FrameSeries, error) {
 				return nil, err
 			}
 
-			allFrameSeries = append(allFrameSeries, chanim.FrameSeries{frameSeriesName, frames})
+			allFrameSeries = append(allFrameSeries, chanim.FrameSeries{
+				Name:   frameSeriesName,
+				Frames: frames,
+			})
 		}
 	}
 
