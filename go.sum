@@ -1,0 +1,10 @@
+github.com/NeowayLabs/drm v0.0.0-20171110144356-4ff39c905c74 h1:kyA1TaQ7xa1VYC9u8OCs19IoTcttjxV/Fo5CCm5oczs=
+github.com/NeowayLabs/drm v0.0.0-20171110144356-4ff39c905c74/go.mod h1:B8Pf8lJWIsLTs7oyWkXOWOGAZiQQVomlZurKAgx8HBA=
+github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
+github.com/rmcsoft/chanim v0.0.0-20190628081211-4ff01330a927 h1:GzK2maeVoMu1qWSdOOBGNtef1rjopGIarNblZ0CEg04=
+github.com/rmcsoft/chanim v0.0.0-20190628081211-4ff01330a927/go.mod h1:QhkGl6CcOsD+tpGlSybYeNPFBR6JH9LoAucBrmrh6dM=
+github.com/rmcsoft/drm v0.0.0-20190625071624-eb993571a25c/go.mod h1:giJ82geJeQYI/4zm1/fJsFkhCZHLv+AjbOiZWAMrNMY=
+github.com/rmcsoft/godrm v0.0.0-20190625071624-eb993571a25c h1:rG4ifHT3HX/unVm48W5PH3JUsdq1aqvdFsYho5jSDrI=
+github.com/rmcsoft/godrm v0.0.0-20190625071624-eb993571a25c/go.mod h1:Lr+TG4ws+/9NSSXhmRQIBFqncUkXx9RacXSQKKyXzgA=
+github.com/veandco/go-sdl2 v0.3.0 h1:IWYkHMp8V3v37NsKjszln8FFnX2+ab0538J371t+rss=
+github.com/veandco/go-sdl2 v0.3.0/go.mod h1:FB+kTpX9YTE+urhYiClnRzpOXbiWgaU3+5F2AB78DPg=
