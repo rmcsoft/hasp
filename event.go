@@ -1,5 +1,9 @@
 package hasp
 
+import (
+	"fmt"
+)
+
 // Event is event Description
 type Event struct {
 	Name string
@@ -10,7 +14,11 @@ type Event struct {
 type IDEventSource = int
 
 // EventSource is definition of the source of events.
-type EventSource = chan *Event
+type EventSource interface {
+	Name() string
+	Events() chan *Event
+	Close()
+}
 
 // EventSources is set of event sources
 type EventSources = []EventSource
@@ -84,12 +92,22 @@ type event struct {
 }
 
 func (esm *EventSourceMultiplexer) runEventSource(id IDEventSource, ctrl *eventSourceCtrl) {
+	fmt.Printf("EventSource '%s' running\n", ctrl.src.Name())
+	defer fmt.Printf("EventSource '%s' stopped\n", ctrl.src.Name())
+
 	for {
 		select {
-		case e := <-ctrl.src:
-			esm.multiplexer <- event{id, e}
+		case e, ok := <-ctrl.src.Events():
+			if ok {
+				esm.multiplexer <- event{id, e}
+			} else {
+				break
+			}
 		case <-ctrl.quit:
-			return
+			ctrl.src.Close()
+			for _, ok := <-ctrl.src.Events(); ok; {
+			}
+			break
 		}
 	}
 }
