@@ -25,7 +25,7 @@ typedef struct {
 	pv_porcupine_object_t* porcupine;
 } Detector;
 
-static snd_pcm_t* openCaptureDev(const char* deviceName, unsigned int rate, unsigned int nchan) {
+static snd_pcm_t* openCaptureDev(const char* deviceName, unsigned int rate) {
 	int err;
 
 	snd_pcm_hw_params_t* params = NULL;
@@ -61,7 +61,7 @@ static snd_pcm_t* openCaptureDev(const char* deviceName, unsigned int rate, unsi
 		goto out;
 	}
 
-	if ((err = snd_pcm_hw_params_set_channels(handle, params, nchan)) < 0) {
+	if ((err = snd_pcm_hw_params_set_channels(handle, params, 1)) < 0) {
 		fprintf(stderr, "Cannot set channel count (%s, %d)\n", snd_strerror(err), err);
 		goto out;
 	}
@@ -73,7 +73,7 @@ static snd_pcm_t* openCaptureDev(const char* deviceName, unsigned int rate, unsi
 
 out:
 	if (err < 0) {
-		errno = err;
+		errno = -err;
 		if (handle != NULL)
 			snd_pcm_close(handle);
 	}
@@ -110,7 +110,7 @@ static void destroyDetector(Detector* d) {
 }
 
 static Detector* newDetector(
-	const char* deviceName, unsigned int rate, unsigned int nchan,
+	const char* deviceName, unsigned int rate,
 	const char *modelPath, const char *keywordPath, float sensitivity,
 	int32_t* stopFlagPtr)
 {
@@ -118,7 +118,7 @@ static Detector* newDetector(
 	if (d == NULL)
 		return NULL;
 
-	d->capDev = openCaptureDev(deviceName, rate, nchan);
+	d->capDev = openCaptureDev(deviceName, rate);
 	if (d->capDev == NULL)
 		goto error;
 
@@ -196,8 +196,19 @@ static int waitHotWord(Detector* d) {
 			return n;
 
 		pv_porcupine_process(d->porcupine, buf, &detected);
-		if (detected)
+		if (detected) {
+#ifdef DEBUG_VOICE
+			time_t rawtime;
+			struct tm* timeinfo;
+
+			time(&rawtime);
+			timeinfo = localtime(&rawtime);
+
+			// Detected keyword. Do something!
+			printf("\n%s Detected keyword!\n", asctime(timeinfo));
+#endif
 			return 0;
+		}
 	}
 
 	return -EINTR;
@@ -294,7 +305,7 @@ import (
 )
 
 const (
-	voiceBufSize int     = 128 * 1024
+	voiceBufSize int     = 64 * 1024
 	sampleRate   int     = 16000
 	sensitivity  float32 = 0.5
 )
@@ -345,7 +356,7 @@ func NewHotWordDetector(deviceName string, modelPath string, keywordPath string)
 		eventChan: make(chan *Event),
 	}
 	es.detector = C.newDetector(
-		C.CString(deviceName), C.uint(sampleRate), 1,
+		C.CString(deviceName), C.uint(sampleRate),
 		C.CString(modelPath), C.CString(keywordPath), C.float(sensitivity),
 		(*C.int32_t)(&es.stopFlag),
 	)
@@ -391,7 +402,7 @@ func (h *hotWordDetector) run() {
 }
 
 func (h *hotWordDetector) notStopped() bool {
-	return atomic.LoadInt32(&h.stopFlag) != 0
+	return atomic.LoadInt32(&h.stopFlag) == 0
 }
 
 func (h *hotWordDetector) hotWordDetected(samples []int16) {
