@@ -6,7 +6,7 @@ package hasp
 // Porcupine
 #cgo CFLAGS: -I${SRCDIR}/../Porcupine/include
 #cgo linux,amd64 LDFLAGS: -L${SRCDIR}/../Porcupine/lib/linux/x86_64
-#cgo linux,arm   LDFLAGS: -L${SRCDIR}/../Porcupine/lib/raspberry-pi/arm11
+#cgo linux,arm   LDFLAGS: -L${SRCDIR}/../Porcupine/lib/beaglebone
 #cgo LDFLAGS: -lpv_porcupine
 
 #include <errno.h>
