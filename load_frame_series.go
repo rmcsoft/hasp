@@ -16,7 +16,7 @@ func loadFrames(path string) ([]chanim.Frame, error) {
 	}
 	sort.Strings(ppixmapFiles)
 
-	frames := make([]chanim.Frame, 0)
+	frames := make([]chanim.Frame, 0, len(ppixmapFiles))
 	for _, ppixmapFile := range ppixmapFiles {
 		ppixmap, err := chanim.LoadPackedPixmap(ppixmapFile)
 		if err != nil {
@@ -41,7 +41,7 @@ func LoadFrameSeries(path string) ([]chanim.FrameSeries, error) {
 		return nil, err
 	}
 
-	allFrameSeries := make([]chanim.FrameSeries, 0)
+	allFrameSeries := make([]chanim.FrameSeries, 0, len(files))
 	for _, fileInfo := range files {
 		if fileInfo.IsDir() {
 			frameSeriesName := fileInfo.Name()

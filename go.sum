@@ -1,5 +1,6 @@
 github.com/NeowayLabs/drm v0.0.0-20171110144356-4ff39c905c74 h1:kyA1TaQ7xa1VYC9u8OCs19IoTcttjxV/Fo5CCm5oczs=
 github.com/NeowayLabs/drm v0.0.0-20171110144356-4ff39c905c74/go.mod h1:B8Pf8lJWIsLTs7oyWkXOWOGAZiQQVomlZurKAgx8HBA=
+github.com/jessevdk/go-flags v1.4.0 h1:4IU2WS7AumrZ/40jfhf4QVDMsQwqA7VEHozFRrGARJA=
 github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
 github.com/looplab/fsm v0.1.0 h1:Qte7Zdn/5hBNbXzP7yxVU4OIFHWXBovyTT2LaBTyC20=
 github.com/looplab/fsm v0.1.0/go.mod h1:m2VaOfDHxqXBBMgc26m6yUOwkFn8H2AlJDE+jd/uafI=
@@ -7,6 +8,10 @@ github.com/rmcsoft/chanim v0.0.0-20190628081211-223db7f204c18dc73b4cad54bc29e005
 github.com/rmcsoft/chanim v0.0.0-20190628081211-223db7f204c18dc73b4cad54bc29e00523284bb0/go.mod h1:QhkGl6CcOsD+tpGlSybYeNPFBR6JH9LoAucBrmrh6dM=
 github.com/rmcsoft/chanim v0.0.0-20190628081211-4ff01330a927 h1:GzK2maeVoMu1qWSdOOBGNtef1rjopGIarNblZ0CEg04=
 github.com/rmcsoft/chanim v0.0.0-20190628081211-4ff01330a927/go.mod h1:QhkGl6CcOsD+tpGlSybYeNPFBR6JH9LoAucBrmrh6dM=
+github.com/rmcsoft/chanim v0.0.0-20190704080828-2ba781729497 h1:QxYBzGP1Ei1ZiSjo4QoNAQIEbG05bKVO59yfL+EwFyU=
+github.com/rmcsoft/chanim v0.0.0-20190704080828-2ba781729497/go.mod h1:QhkGl6CcOsD+tpGlSybYeNPFBR6JH9LoAucBrmrh6dM=
+github.com/rmcsoft/chanim v0.0.0-20190704104934-eaf6089708bb h1:DJ8bMwNFa0sasdAfuHBD7iphI43r/cAV65At2OMSR9g=
+github.com/rmcsoft/chanim v0.0.0-20190704104934-eaf6089708bb/go.mod h1:QhkGl6CcOsD+tpGlSybYeNPFBR6JH9LoAucBrmrh6dM=
 github.com/rmcsoft/drm v0.0.0-20190625071624-eb993571a25c/go.mod h1:giJ82geJeQYI/4zm1/fJsFkhCZHLv+AjbOiZWAMrNMY=
 github.com/rmcsoft/godrm v0.0.0-20190625071624-eb993571a25c h1:rG4ifHT3HX/unVm48W5PH3JUsdq1aqvdFsYho5jSDrI=
 github.com/rmcsoft/godrm v0.0.0-20190625071624-eb993571a25c/go.mod h1:Lr+TG4ws+/9NSSXhmRQIBFqncUkXx9RacXSQKKyXzgA=
