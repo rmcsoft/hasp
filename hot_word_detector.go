@@ -172,15 +172,17 @@ static int readSamples(Detector* d, int16_t* buf, int maxSampleCount) {
 #define NOISE_THRESHOLD 5000
 #define NOISE_FRAMES 30
 
-static short maxSampleValue(int16_t* samples, int sampleCount) {
-	int16_t max = INT16_MAX;
-	int16_t* end = samples + sampleCount;
+static short getMaxLoud(const int16_t* samples, int sampleCount) {
+	int16_t max = 0;
+	const int16_t* end = samples + sampleCount;
 	for (; samples != end; ++samples) {
 		int16_t v = *samples;
-		if (v < 0)
+		if (v < 0) {
 			v = -v;
-		if (v > max)
+		}
+		if (v > max) {
 			max = v;
+		}
 	}
 	return max;
 }
@@ -226,7 +228,7 @@ static int readVoice(Detector* d, int16_t* voiceBuffer, int maxSampleCount) {
 		if (n < 0)
 			return n;
 
-		int16_t maxLoud = maxSampleValue(buf, n);
+		int16_t maxLoud = getMaxLoud(buf, n);
 
 		if (n > maxSampleCount - currentBufferFill)
 			n = maxSampleCount - currentBufferFill;
