@@ -4,9 +4,8 @@ github.com/jessevdk/go-flags v1.4.0 h1:4IU2WS7AumrZ/40jfhf4QVDMsQwqA7VEHozFRrGAR
 github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
 github.com/looplab/fsm v0.1.0 h1:Qte7Zdn/5hBNbXzP7yxVU4OIFHWXBovyTT2LaBTyC20=
 github.com/looplab/fsm v0.1.0/go.mod h1:m2VaOfDHxqXBBMgc26m6yUOwkFn8H2AlJDE+jd/uafI=
-github.com/rmcsoft/chanim v0.0.0-20190704104934-eaf6089708bb h1:DJ8bMwNFa0sasdAfuHBD7iphI43r/cAV65At2OMSR9g=
-github.com/rmcsoft/chanim v0.0.0-20190704104934-eaf6089708bb/go.mod h1:QhkGl6CcOsD+tpGlSybYeNPFBR6JH9LoAucBrmrh6dM=
-github.com/rmcsoft/drm v0.0.0-20190625071624-eb993571a25c/go.mod h1:giJ82geJeQYI/4zm1/fJsFkhCZHLv+AjbOiZWAMrNMY=
+github.com/rmcsoft/chanim v0.0.0-20190704151712-c355099c3ca5 h1:j5RNkdFCTq0oW7dhzTNg9jbN4UWC2JZkuWQBl2+jSQM=
+github.com/rmcsoft/chanim v0.0.0-20190704151712-c355099c3ca5/go.mod h1:YE8Q/X/IeEU73JxotHPUZouDaeZKcl/k2qX2Lkf6e0E=
 github.com/rmcsoft/godrm v0.0.0-20190625071624-eb993571a25c h1:rG4ifHT3HX/unVm48W5PH3JUsdq1aqvdFsYho5jSDrI=
 github.com/rmcsoft/godrm v0.0.0-20190625071624-eb993571a25c/go.mod h1:Lr+TG4ws+/9NSSXhmRQIBFqncUkXx9RacXSQKKyXzgA=
 github.com/veandco/go-sdl2 v0.3.0 h1:IWYkHMp8V3v37NsKjszln8FFnX2+ab0538J371t+rss=
