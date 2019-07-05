@@ -3,25 +3,39 @@ package main
 import (
 	"fmt"
 	"os"
-	"time"
 
+	"github.com/jessevdk/go-flags"
 	"github.com/rmcsoft/hasp"
 )
 
-func main() {
-	capDev := os.Args[1]
-	modelPath := os.Args[2]
-	keywordPath := os.Args[3]
+type options struct {
+	CaptureDevice  string `short:"c" long:"capture-dev" default:"hw:0"`
+	ModelParamPath string `short:"m" long:"model-param"`
+	KeywordPath    string `short:"k" long:"keyword"`
+}
 
-	hotWordDetector, err := hasp.NewHotWordDetector(capDev, modelPath, keywordPath)
+func parseCmd() options {
+	var opts options
+	var cmdParser = flags.NewParser(&opts, flags.Default)
+	var err error
+
+	if _, err = cmdParser.Parse(); err != nil {
+		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
+			os.Exit(0)
+		} else {
+			panic(err)
+		}
+	}
+
+	return opts
+}
+
+func main() {
+	opts := parseCmd()
+	hotWordDetector, err := hasp.NewHotWordDetector(opts.CaptureDevice, opts.ModelParamPath, opts.KeywordPath)
 	if err != nil {
 		panic(err)
 	}
-
-	go func() {
-		time.Sleep(5 * time.Minute)
-		hotWordDetector.Close()
-	}()
 
 	for event := range hotWordDetector.Events() {
 		v, _ := event.GetVoice()
