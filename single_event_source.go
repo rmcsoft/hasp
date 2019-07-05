@@ -14,6 +14,7 @@ func NewSingleEventSource(name string, fn func() *Event) EventSource {
 
 	go func() {
 		es.eventChan <- fn()
+		close(es.eventChan)
 	}()
 
 	return es
