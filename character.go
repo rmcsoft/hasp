@@ -8,8 +8,11 @@ import (
 	"github.com/rmcsoft/chanim"
 )
 
+// EventDesc represents an event when initializing the FSM
+type EventDesc = fsm.EventDesc
+
 // EventDescs is a shorthand for defining the transition map
-type EventDescs = []fsm.EventDesc
+type EventDescs = []EventDesc
 
 // Character is animated character
 type Character struct {
@@ -17,15 +20,26 @@ type Character struct {
 	animator *chanim.Animator
 	fsm      *fsm.FSM
 
-	eventSourceMultiplexer EventSourceMultiplexer
+	eventSourceMultiplexer *EventSourceMultiplexer
 	stateEventSources      []IDEventSource
 }
 
 // NewCharacter creates new a Character
 func NewCharacter(initStateName string, states States, eventDescs EventDescs, eventSources EventSources, animator *chanim.Animator) (*Character, error) {
 	c := &Character{
-		states:   states,
-		animator: animator,
+		states:                 states,
+		animator:               animator,
+		eventSourceMultiplexer: NewEventSourceMultiplexer(),
+	}
+
+	// In any of the states, the StateChanged event should lead to updating
+	// the anammation and sound without going to another state.
+	for stateName := range states {
+		eventDescs = append(eventDescs, EventDesc{
+			Name: StateChangedEventName,
+			Src:  []string{stateName},
+			Dst:  stateName,
+		})
 	}
 
 	c.fsm = fsm.NewFSM(
@@ -60,8 +74,10 @@ func (c *Character) Run() error {
 	for event := c.eventSourceMultiplexer.NextEvent(); event != nil; {
 		err := c.fsm.Event(event.Name, event.Args...)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%v", err)
+			fmt.Fprintf(os.Stderr, "%v\n", err)
 		}
+
+		event = c.eventSourceMultiplexer.NextEvent()
 	}
 
 	return nil

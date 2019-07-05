@@ -10,6 +10,10 @@ type Event struct {
 	Args []interface{}
 }
 
+// StateChangedEventName An event means that the current state has changed and
+// need to update the animation and sound without naming the current state
+const StateChangedEventName = "StateChanged"
+
 // IDEventSource type to identify event sources
 type IDEventSource = int
 

@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/rmcsoft/hasp"
 
@@ -18,6 +18,10 @@ const (
 type options struct {
 	PackedImageDir string `short:"i" long:"image-dir" description:"Packed image directory needed for animation"`
 	UseSDL         bool   `short:"s" long:"use-sdl"   description:"Render with sdl"`
+
+	CaptureDevice  string `short:"c" long:"capture-dev" default:"hw:0" description:"Sound capture device name"`
+	ModelParamPath string `short:"m" long:"model-param" description:"Path to file containing model parameters"`
+	KeywordPath    string `short:"k" long:"keyword"     description:"Path to keyword file"`
 }
 
 func parseCmd() options {
@@ -44,7 +48,7 @@ func makePaintEngine(opts options) chanim.PaintEngine {
 	var err error
 	var paintEngine chanim.PaintEngine
 	if opts.UseSDL {
-		paintEngine, err = chanim.NewSDLPaintEngine(600, 1024)
+		paintEngine, err = chanim.NewSDLPaintEngine(1024, 600)
 	} else {
 		paintEngine, err = chanim.NewKMSDRMPaintEngine(0, pixFormat)
 	}
@@ -61,32 +65,43 @@ func makeAnimator(opts options) *chanim.Animator {
 	if err != nil {
 		panic(err)
 	}
-
 	return animator
+}
+
+func makeHotWordDetector(opts options) hasp.EventSource {
+	hotWordDetector, err := hasp.NewHotWordDetector(opts.CaptureDevice, opts.ModelParamPath, opts.KeywordPath)
+	if err != nil {
+		panic(err)
+	}
+	return hotWordDetector
+}
+
+func makeCharacter(opts options) *hasp.Character {
+	states := hasp.States{
+		"idle": hasp.NewIdleState(
+			[]string{"lotus", "reading"},
+			time.Duration(2)*time.Minute),
+	}
+
+	eventSources := hasp.EventSources{
+		makeHotWordDetector(opts),
+	}
+
+	animator := makeAnimator(opts)
+	character, err := hasp.NewCharacter("idle", states, nil, eventSources, animator)
+	if err != nil {
+		panic(err)
+	}
+
+	return character
 }
 
 func main() {
 	opts := parseCmd()
-	animator := makeAnimator(opts)
-	animationNames := animator.GetAnimationNames()
 
-	err := animator.Start(animationNames[0])
+	character := makeCharacter(opts)
+	err := character.Run()
 	if err != nil {
 		panic(err)
-	}
-	for {
-		fmt.Printf("Available animations:\n")
-		for _, animationName := range animationNames {
-			fmt.Printf("\t%s:\n", animationName)
-		}
-
-		nextAnimation := ""
-		fmt.Printf("Next animation -> ")
-		fmt.Scanf("%s", &nextAnimation)
-
-		err = animator.ChangeAnimation(nextAnimation)
-		if err != nil {
-			fmt.Println(err)
-		}
 	}
 }

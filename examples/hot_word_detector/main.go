@@ -9,9 +9,9 @@ import (
 )
 
 type options struct {
-	CaptureDevice  string `short:"c" long:"capture-dev" default:"hw:0"`
-	ModelParamPath string `short:"m" long:"model-param"`
-	KeywordPath    string `short:"k" long:"keyword"`
+	CaptureDevice  string `short:"c" long:"capture-dev" default:"hw:0" description:"Sound capture device name"`
+	ModelParamPath string `short:"m" long:"model-param" description:"Path to file containing model parameters"`
+	KeywordPath    string `short:"k" long:"keyword"     description:"Path to keyword file"`
 }
 
 func parseCmd() options {
