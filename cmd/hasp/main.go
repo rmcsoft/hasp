@@ -20,6 +20,7 @@ type options struct {
 	UseSDL         bool   `short:"s" long:"use-sdl"   description:"Render with sdl"`
 
 	CaptureDevice  string `short:"c" long:"capture-dev" default:"hw:0" description:"Sound capture device name"`
+	PlayDevice     string `short:"p" long:"play-dev"    default:"mono" description:"Sound play device name"`
 	ModelParamPath string `short:"m" long:"model-param" description:"Path to file containing model parameters"`
 	KeywordPath    string `short:"k" long:"keyword"     description:"Path to keyword file"`
 }
@@ -76,6 +77,14 @@ func makeHotWordDetector(opts options) hasp.EventSource {
 	return hotWordDetector
 }
 
+func makeSoundPlayer(opts options) *hasp.SoundPlayer {
+	player, err := hasp.NewSoundPlayer(opts.PlayDevice, 16000)
+	if err != nil {
+		panic(err)
+	}
+	return player
+}
+
 func makeCharacter(opts options) *hasp.Character {
 	states := hasp.States{
 		"idle": hasp.NewIdleState(
@@ -88,7 +97,8 @@ func makeCharacter(opts options) *hasp.Character {
 	}
 
 	animator := makeAnimator(opts)
-	character, err := hasp.NewCharacter("idle", states, nil, eventSources, animator)
+	soundPlayer := makeSoundPlayer(opts)
+	character, err := hasp.NewCharacter("idle", states, nil, eventSources, animator, soundPlayer)
 	if err != nil {
 		panic(err)
 	}

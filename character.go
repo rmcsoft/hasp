@@ -16,16 +16,30 @@ type EventDescs = []EventDesc
 
 // Character is animated character
 type Character struct {
-	states   States
-	animator *chanim.Animator
-	fsm      *fsm.FSM
+	states      States
+	animator    *chanim.Animator
+	soundPlayer *SoundPlayer
+	fsm         *fsm.FSM
 
 	eventSourceMultiplexer *EventSourceMultiplexer
-	stateEventSources      []IDEventSource
+
+	// Event sources that are added when entering the state
+	// and removed when exiting the state
+	stateEventSources []IDEventSource
+
+	// Event sources that are replaced with each StateChangedEvent
+	stateChangedEventSources []IDEventSource
 }
 
 // NewCharacter creates new a Character
-func NewCharacter(initStateName string, states States, eventDescs EventDescs, eventSources EventSources, animator *chanim.Animator) (*Character, error) {
+func NewCharacter(
+	initStateName string,
+	states States,
+	eventDescs EventDescs,
+	eventSources EventSources,
+	animator *chanim.Animator,
+	soundPlayer *SoundPlayer) (*Character, error) {
+
 	c := &Character{
 		states:                 states,
 		animator:               animator,
@@ -118,7 +132,7 @@ func (c *Character) enterStateCallbacks(e *fsm.Event) {
 	if eventSources != nil {
 		stateEventSources := make([]IDEventSource, 0, len(eventSources))
 		for _, eventSource := range eventSources {
-			idEventSource := c.eventSourceMultiplexer.AddEventSource(eventSource)
+			idEventSource := c.addEventSource(eventSource)
 			stateEventSources = append(stateEventSources, idEventSource)
 		}
 		c.stateEventSources = stateEventSources
@@ -140,18 +154,45 @@ func (c *Character) leaveStateCallback(e *fsm.Event) {
 }
 
 func (c *Character) updateCharacter(e *fsm.Event, start bool) {
+	// Remove older EventSources
+	for _, idEventSource := range c.stateChangedEventSources {
+		c.removeEventSource(idEventSource)
+	}
+	c.stateChangedEventSources = nil
+
 	stateName := c.fsm.Current()
 	if state, ok := c.states[stateName]; ok {
-		animation := state.GetAnimation()
 		var err error
+
+		animation := state.GetAnimation()
 		if start {
 			err = c.animator.Start(animation)
 		} else {
 			err = c.animator.ChangeAnimation(animation)
 		}
-
 		if err != nil {
 			e.Cancel(err)
+			return
+		}
+
+		sound := state.GetSound()
+		if sound != nil {
+			eventSources, err := c.soundPlayer.Play(sound)
+			if err != nil {
+				e.Cancel(err)
+				return
+			}
+			c.stateChangedEventSources = append(c.stateChangedEventSources,
+				c.addEventSource(eventSources),
+			)
 		}
 	}
+}
+
+func (c *Character) addEventSource(eventSource EventSource) IDEventSource {
+	return c.eventSourceMultiplexer.AddEventSource(eventSource)
+}
+
+func (c *Character) removeEventSource(id IDEventSource) {
+	c.eventSourceMultiplexer.RemoveEventSource(id)
 }
