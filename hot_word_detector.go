@@ -74,8 +74,10 @@ static snd_pcm_t* openCaptureDev(const char* deviceName, unsigned int rate) {
 out:
 	if (err < 0) {
 		errno = -err;
-		if (handle != NULL)
+		if (handle != NULL) {
 			snd_pcm_close(handle);
+			handle = NULL;
+		}
 	}
 
 	if (params)
