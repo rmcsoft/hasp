@@ -15,7 +15,7 @@ type Event struct {
 const StateChangedEventName = "StateChanged"
 
 // IDEventSource type to identify event sources
-type IDEventSource = int
+type IDEventSource = uint64
 
 // EventSource is definition of the source of events.
 type EventSource interface {
