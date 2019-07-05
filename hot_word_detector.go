@@ -304,70 +304,99 @@ import (
 	"errors"
 	"fmt"
 	"sync/atomic"
+	"time"
 )
 
 const (
-	voiceBufSize int     = 64 * 1024
-	sampleRate   int     = 16000
-	sensitivity  float32 = 0.5
+	recTime     time.Duration = time.Duration(4) * time.Second
+	sensitivity float32       = 0.5
 )
 
 type hotWordDetector struct {
 	eventChan chan *Event
 	stopFlag  int32
 
-	detector *C.Detector
+	detector   *C.Detector
+	sampleRate int
+}
+
+// HotWordDetectedEventData is the HotWordDetectedEvent data
+type HotWordDetectedEventData struct {
+	Samples    []int16
+	SampleRate int
 }
 
 const (
-	// HotWordDetectedEventName the name of the HotWordDetected event.
+	// HotWordDetectedEventName is the event name for keyword detection
 	HotWordDetectedEventName = "HotWordDetected"
 )
 
 // NewHotWordDetectedEvent creates HotWordDetectedEvent
-func NewHotWordDetectedEvent(samples []int16) *Event {
+func NewHotWordDetectedEvent(samples []int16, sampleRate int) *Event {
 	return &Event{
 		Name: HotWordDetectedEventName,
 		Args: []interface{}{
-			samples,
+			HotWordDetectedEventData{samples, sampleRate},
 		},
 	}
 }
 
-// GetVoice gets voice from event
-func (event *Event) GetVoice() ([]int16, error) {
+// GetHotWordDetectedEventData gets HotWordDetectedEvent data
+func (event *Event) GetHotWordDetectedEventData() (HotWordDetectedEventData, error) {
 	if event.Name != HotWordDetectedEventName {
-		return nil, fmt.Errorf("")
+		return HotWordDetectedEventData{},
+			fmt.Errorf("The event must be named %s", HotWordDetectedEventName)
 	}
 
 	if len(event.Args) != 1 {
-		return nil, errors.New("Event does not contain voice")
+		return HotWordDetectedEventData{},
+			errors.New("Event does not data")
 	}
 
-	samples, ok := event.Args[0].([]int16)
+	data, ok := event.Args[0].(HotWordDetectedEventData)
 	if !ok {
-		return nil, errors.New("Event does not contain voice")
+		return HotWordDetectedEventData{},
+			errors.New("Event does not contain samples")
 	}
 
-	return samples, nil
+	return data, nil
+}
+
+// GetSampleRate gets sample rate
+func (event *Event) GetSampleRate() (int, error) {
+	if event.Name != HotWordDetectedEventName {
+		return 0, fmt.Errorf("The event must be named %s", HotWordDetectedEventName)
+	}
+
+	if len(event.Args) < 2 {
+		return 0, errors.New("Event does not contain sampleRate")
+	}
+
+	sampleRate, ok := event.Args[1].(int)
+	if !ok {
+		return 0, errors.New("Event does not contain sampleRate")
+	}
+
+	return sampleRate, nil
 }
 
 // NewHotWordDetector creates HotWordDetector
 func NewHotWordDetector(deviceName string, modelPath string, keywordPath string) (EventSource, error) {
-	es := &hotWordDetector{
-		eventChan: make(chan *Event),
+	h := &hotWordDetector{
+		sampleRate: int(C.pv_sample_rate()),
+		eventChan:  make(chan *Event),
 	}
-	es.detector = C.newDetector(
-		C.CString(deviceName), C.uint(sampleRate),
+	h.detector = C.newDetector(
+		C.CString(deviceName), C.uint(h.sampleRate),
 		C.CString(modelPath), C.CString(keywordPath), C.float(sensitivity),
-		(*C.int32_t)(&es.stopFlag),
+		(*C.int32_t)(&h.stopFlag),
 	)
-	if es.detector == nil {
+	if h.detector == nil {
 		return nil, errors.New("Couldn't create detector")
 	}
 
-	go es.run()
-	return es, nil
+	go h.run()
+	return h, nil
 }
 
 func (h *hotWordDetector) Name() string {
@@ -390,11 +419,12 @@ func (h *hotWordDetector) run() {
 		return
 	}
 
+	maxSampleCount := int(recTime) * h.sampleRate / int(time.Second)
 	for h.notStopped() {
-		voice := [voiceBufSize]int16{}
-		sampleCount := C.detect(h.detector, (*C.int16_t)(&voice[0]), C.int(voiceBufSize))
+		buf := make([]int16, maxSampleCount)
+		sampleCount := C.detect(h.detector, (*C.int16_t)(&buf[0]), C.int(maxSampleCount))
 		if sampleCount > 0 {
-			h.hotWordDetected(voice[0:sampleCount])
+			h.hotWordDetected(buf[0:sampleCount])
 		} else {
 			if h.notStopped() {
 				h.hotWordDetected(nil)
@@ -408,7 +438,7 @@ func (h *hotWordDetector) notStopped() bool {
 }
 
 func (h *hotWordDetector) hotWordDetected(samples []int16) {
-	h.eventChan <- NewHotWordDetectedEvent(samples)
+	h.eventChan <- NewHotWordDetectedEvent(samples, h.sampleRate)
 }
 
 func (h *hotWordDetector) destroyDetector() {

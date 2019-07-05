@@ -38,8 +38,8 @@ func main() {
 	}
 
 	for event := range hotWordDetector.Events() {
-		v, _ := event.GetVoice()
-		fmt.Printf("Samples count (voice)=%v\n", len(v))
+		d, _ := event.GetHotWordDetectedEventData()
+		fmt.Printf("samplesCount=%v, sampleRate=%v\n", len(d.Samples), d.SampleRate)
 	}
 
 	fmt.Printf("HotWordDetector was closed\n")
