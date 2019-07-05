@@ -6,7 +6,7 @@ type State interface {
 	Leave(event Event) bool
 
 	GetAnimation() string
-	GetSound() []uint16
+	GetSound() []int16
 }
 
 // States is set of states.
