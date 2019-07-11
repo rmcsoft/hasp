@@ -105,13 +105,14 @@ func (esm *EventSourceMultiplexer) runEventSource(id IDEventSource, ctrl *eventS
 			if ok {
 				esm.multiplexer <- event{id, e}
 			} else {
-				break
+				return
 			}
 		case <-ctrl.quit:
 			ctrl.src.Close()
 			for _, ok := <-ctrl.src.Events(); ok; {
 			}
-			break
+
+			return
 		}
 	}
 }

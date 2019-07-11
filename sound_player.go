@@ -116,7 +116,7 @@ func NewSoundPlayer(devName string, sampleRate int) (*SoundPlayer, error) {
 	sp := &SoundPlayer{
 		devName:    devName,
 		sampleRate: sampleRate,
-		devMutex: &sync.Mutex{},
+		devMutex:   &sync.Mutex{},
 	}
 	sp.devClosedCond = sync.NewCond(sp.devMutex)
 	return sp, nil
@@ -168,8 +168,10 @@ func (p *SoundPlayer) stop(useLock bool) {
 
 func (p *SoundPlayer) closeDev() {
 	p.devMutex.Lock()
-	C.snd_pcm_close(p.dev)
-	p.dev = nil
+	if p.dev != nil {
+		C.snd_pcm_close(p.dev)
+		p.dev = nil
+	}
 	p.devClosedCond.Signal()
 	p.devMutex.Unlock()
 }
