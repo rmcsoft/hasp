@@ -317,8 +317,8 @@ import (
 )
 
 const (
-	recTime     time.Duration = time.Duration(6) * time.Second
-	sensitivity float32       = 0.5
+	recTime     int64   = int64(time.Duration(6) * time.Second)
+	sensitivity float32 = 0.5
 )
 
 type hotWordDetector struct {
@@ -392,7 +392,7 @@ func (h *hotWordDetector) run(doDetect bool) {
 		return
 	}
 
-	maxSampleCount := int(recTime) * h.sampleRate / int(time.Second)
+	maxSampleCount := int(recTime * int64(h.sampleRate) / int64(time.Second))
 	for h.notStopped() {
 		fmt.Println(" ===> HotWordDetector loop!!!!!!!!!!!")
 		//time.Sleep(time.Duration(100) * time.Millisecond)
