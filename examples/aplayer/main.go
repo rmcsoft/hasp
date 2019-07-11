@@ -32,6 +32,7 @@ func parseCmd() options {
 
 	if _, err = cmdParser.Parse(); err != nil {
 		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
+			fmt.Println(flagsErr)
 			os.Exit(0)
 		}
 		fail(err)
