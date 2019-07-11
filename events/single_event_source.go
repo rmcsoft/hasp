@@ -1,4 +1,4 @@
-package hasp
+package events
 
 type singleEventSource struct {
 	name      string

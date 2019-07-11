@@ -4,33 +4,43 @@ import (
 	"fmt"
 	"sync/atomic"
 	"time"
+
+	"github.com/rmcsoft/hasp/events"
 )
 
 type idleState struct {
-	availableAnimations []string
-	animationDuration   time.Duration
-	currentAnimation    int
+	availableAnimations   []string
+	animationDuration     time.Duration
+	currentAnimation      int
+	hotWordDetectorParams HotWordDetectorParams
 }
 
 // NewIdleState creates new IdleState
-func NewIdleState(availableAnimations []string, animationDuration time.Duration) State {
+func NewIdleState(availableAnimations []string, animationDuration time.Duration,
+	hotWordDetectorParams HotWordDetectorParams) State {
+
 	return &idleState{
-		availableAnimations: availableAnimations,
-		animationDuration:   animationDuration,
+		availableAnimations:   availableAnimations,
+		animationDuration:     animationDuration,
+		hotWordDetectorParams: hotWordDetectorParams,
 	}
 }
 
-func (s *idleState) Enter(event Event) (EventSources, error) {
+func (s *idleState) Enter(event events.Event) (events.EventSources, error) {
 	fmt.Printf("IdleState Enter\n")
-	return EventSources{
-			&changeAnimationEventSource{
-				period: s.animationDuration,
-			},
+	detector, err := NewHotWordDetector(s.hotWordDetectorParams)
+	if err != nil {
+		return nil, err
+	}
+	return events.EventSources{
+		&changeAnimationEventSource{
+			period: s.animationDuration,
 		},
-		nil
+		detector,
+	}, nil
 }
 
-func (s *idleState) Leave(event Event) bool {
+func (s *idleState) Leave(event events.Event) bool {
 	fmt.Printf("IdleState Leave\n")
 	return true
 }
@@ -54,12 +64,12 @@ func (c *changeAnimationEventSource) Name() string {
 	return "ChangeAnimationEventSource"
 }
 
-func (c *changeAnimationEventSource) Events() chan *Event {
-	eventChan := make(chan *Event)
+func (c *changeAnimationEventSource) Events() chan *events.Event {
+	eventChan := make(chan *events.Event)
 	go func() {
 		for atomic.LoadInt32(&c.stopFlag) == 0 {
 			time.Sleep(c.period)
-			eventChan <- &Event{Name: StateChangedEventName}
+			eventChan <- &events.Event{Name: events.StateChangedEventName}
 		}
 	}()
 	return eventChan

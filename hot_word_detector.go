@@ -126,9 +126,12 @@ static Detector* newDetector(
 	if (d->capDev == NULL)
 		goto error;
 
-	d->porcupine = createPorcupine(modelPath, keywordPath, sensitivity);
-	if (d->porcupine == NULL)
-		goto error;
+	if (modelPath != NULL && keywordPath != NULL)
+	{
+		d->porcupine = createPorcupine(modelPath, keywordPath, sensitivity);
+		if (d->porcupine == NULL)
+			goto error;
+	}
 
 	d->stopFlagPtr = stopFlagPtr;
 	return d;
@@ -174,7 +177,7 @@ static int readSamples(Detector* d, int16_t* buf, int maxSampleCount) {
 
 #define DEBUG_VOICE
 #define NOISE_THRESHOLD 5000
-#define NOISE_FRAMES 30
+#define NOISE_FRAMES 15
 
 static short getMaxLoud(const int16_t* samples, int sampleCount) {
 	int16_t max = 0;
@@ -306,39 +309,66 @@ import "C"
 
 import (
 	"errors"
+	"fmt"
 	"sync/atomic"
 	"time"
+
+	hasp "github.com/rmcsoft/hasp/events"
 )
 
 const (
-	recTime     time.Duration = time.Duration(4) * time.Second
+	recTime     time.Duration = time.Duration(6) * time.Second
 	sensitivity float32       = 0.5
 )
 
 type hotWordDetector struct {
-	eventChan chan *Event
+	eventChan chan *hasp.Event
 	stopFlag  int32
 
 	detector   *C.Detector
 	sampleRate int
 }
 
+type HotWordDetectorParams struct {
+	CaptureDeviceName string
+	ModelPath         string
+	KeywordPath       string
+}
+
 // NewHotWordDetector creates HotWordDetector
-func NewHotWordDetector(deviceName string, modelPath string, keywordPath string) (EventSource, error) {
+func NewHotWordDetector(params HotWordDetectorParams) (hasp.EventSource, error) {
 	h := &hotWordDetector{
 		sampleRate: int(C.pv_sample_rate()),
-		eventChan:  make(chan *Event),
+		eventChan:  make(chan *hasp.Event),
 	}
 	h.detector = C.newDetector(
-		C.CString(deviceName), C.uint(h.sampleRate),
-		C.CString(modelPath), C.CString(keywordPath), C.float(sensitivity),
+		C.CString(params.CaptureDeviceName), C.uint(h.sampleRate),
+		C.CString(params.ModelPath), C.CString(params.KeywordPath), C.float(sensitivity),
 		(*C.int32_t)(&h.stopFlag),
 	)
 	if h.detector == nil {
 		return nil, errors.New("Couldn't create detector")
 	}
 
-	go h.run()
+	go h.run(true)
+	return h, nil
+}
+
+func NewSoundCapturer(deviceName string) (hasp.EventSource, error) {
+	h := &hotWordDetector{
+		sampleRate: int(C.pv_sample_rate()),
+		eventChan:  make(chan *hasp.Event),
+	}
+	h.detector = C.newDetector(
+		C.CString(deviceName), C.uint(h.sampleRate),
+		nil, nil, C.float(sensitivity),
+		(*C.int32_t)(&h.stopFlag),
+	)
+	if h.detector == nil {
+		return nil, errors.New("Couldn't create detector")
+	}
+
+	go h.run(false)
 	return h, nil
 }
 
@@ -346,7 +376,7 @@ func (h *hotWordDetector) Name() string {
 	return "HotWordDetector"
 }
 
-func (h *hotWordDetector) Events() chan *Event {
+func (h *hotWordDetector) Events() chan *hasp.Event {
 	return h.eventChan
 }
 
@@ -354,7 +384,7 @@ func (h *hotWordDetector) Close() {
 	atomic.StoreInt32(&h.stopFlag, 1)
 }
 
-func (h *hotWordDetector) run() {
+func (h *hotWordDetector) run(doDetect bool) {
 	defer h.destroyDetector()
 	defer close(h.eventChan)
 
@@ -364,13 +394,26 @@ func (h *hotWordDetector) run() {
 
 	maxSampleCount := int(recTime) * h.sampleRate / int(time.Second)
 	for h.notStopped() {
+		fmt.Println(" ===> HotWordDetector loop!!!!!!!!!!!")
+		//time.Sleep(time.Duration(100) * time.Millisecond)
 		buf := make([]int16, maxSampleCount)
-		sampleCount := C.detect(h.detector, (*C.int16_t)(&buf[0]), C.int(maxSampleCount))
-		if sampleCount > 0 {
-			h.hotWordDetected(buf[0:sampleCount])
+		if doDetect {
+			sampleCount := C.detect(h.detector, (*C.int16_t)(&buf[0]), C.int(maxSampleCount))
+			if sampleCount > 0 {
+				h.hotWordDetected(buf[0:sampleCount]) //TODO: hotWord with sound captured
+			} else {
+				if h.notStopped() {
+					h.hotWordDetected(nil)
+				}
+			}
 		} else {
-			if h.notStopped() {
-				h.hotWordDetected(nil)
+			sampleCount := C.readVoice(h.detector, (*C.int16_t)(&buf[0]), C.int(maxSampleCount))
+			if sampleCount > 0 {
+				h.soundCaptured(buf[0:sampleCount])
+			} else {
+				if h.notStopped() {
+					h.soundEmpty()
+				}
 			}
 		}
 	}
@@ -381,7 +424,15 @@ func (h *hotWordDetector) notStopped() bool {
 }
 
 func (h *hotWordDetector) hotWordDetected(samples []int16) {
-	h.eventChan <- NewHotWordDetectedEvent(samples, h.sampleRate)
+	h.eventChan <- hasp.NewHotWordDetectedEvent(samples, h.sampleRate)
+}
+
+func (h *hotWordDetector) soundCaptured(samples []int16) {
+	h.eventChan <- hasp.NewSoundCapturedEvent(samples, h.sampleRate)
+}
+
+func (h *hotWordDetector) soundEmpty() {
+	h.eventChan <- hasp.NewSoundEmptyEvent()
 }
 
 func (h *hotWordDetector) destroyDetector() {

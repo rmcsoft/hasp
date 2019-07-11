@@ -1,4 +1,4 @@
-package hasp
+package events
 
 import (
 	"fmt"
@@ -67,7 +67,7 @@ func (esm *EventSourceMultiplexer) AddEventSource(src EventSource) IDEventSource
 
 	newEventSourceCtrl := &eventSourceCtrl{
 		src:  src,
-		quit: make(chan bool),
+		quit: make(chan bool, 1),
 	}
 
 	esm.eventSources[id] = newEventSourceCtrl

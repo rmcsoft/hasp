@@ -84,38 +84,46 @@ static int playback(snd_pcm_t* handle, const int16_t* buf, int bufSize) {
         return err;
 	}
 
+    snd_pcm_drain(handle);
+
 	return 0;
 }
 */
 import "C"
 
 import (
+	"fmt"
 	"sync"
+
+	hasp "github.com/rmcsoft/hasp/events"
 )
 
 // SoundPlayedEventName an event with this name is emitted when the sound is played
-const SoundPlayedEventName = "SoundPlayedEven"
+const SoundPlayedEventName = "SoundPlayedEvent"
 
 // SoundPlayer sound player
 type SoundPlayer struct {
 	devName    string
 	sampleRate int
 
-	devClosedCond sync.Cond
-	devMutex      sync.Mutex
+	devClosedCond *sync.Cond
+	devMutex      *sync.Mutex
 	dev           *C.snd_pcm_t
 }
 
 // NewSoundPlayer creates new SoundPlayer
 func NewSoundPlayer(devName string, sampleRate int) (*SoundPlayer, error) {
-	return &SoundPlayer{
+	sp := &SoundPlayer{
 		devName:    devName,
 		sampleRate: sampleRate,
-	}, nil
+		devMutex: &sync.Mutex{},
+	}
+	sp.devClosedCond = sync.NewCond(sp.devMutex)
+	return sp, nil
 }
 
 // Play starts playing back buffer
-func (p *SoundPlayer) Play(samples []int16) (EventSource, error) {
+func (p *SoundPlayer) Play(samples []int16) (hasp.EventSource, error) {
 
 	p.devMutex.Lock()
 	defer p.devMutex.Unlock()
@@ -126,17 +134,19 @@ func (p *SoundPlayer) Play(samples []int16) (EventSource, error) {
 
 	}
 
-	asynPlay := func() *Event {
+	asyncPlay := func() *hasp.Event {
+		fmt.Println("StartPlay")
 		sampleCount := len(samples)
 		C.playback(p.dev, (*C.int16_t)(&samples[0]), C.int(sampleCount))
 		p.closeDev()
-		return &Event{Name: SoundPlayedEventName}
+		fmt.Println("StopPlay")
+		return &hasp.Event{Name: SoundPlayedEventName}
 	}
 
-	return NewSingleEventSource("SoundPlayerEventSource", asynPlay), nil
+	return hasp.NewSingleEventSource("SoundPlayerEventSource", asyncPlay), nil
 }
 
-// Stop stops playing
+// Stop playing
 func (p *SoundPlayer) Stop() {
 	p.stop(true)
 }

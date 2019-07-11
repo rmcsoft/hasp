@@ -1,4 +1,4 @@
-package hasp
+package events
 
 import (
 	"errors"

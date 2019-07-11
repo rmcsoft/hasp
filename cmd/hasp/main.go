@@ -6,10 +6,15 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/rmcsoft/hasp"
-
-	"github.com/jessevdk/go-flags"
 	"github.com/rmcsoft/chanim"
+	"github.com/rmcsoft/hasp"
+	"github.com/rmcsoft/hasp/events"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/lexruntimeservice"
+	"github.com/jessevdk/go-flags"
 )
 
 const (
@@ -24,6 +29,9 @@ type options struct {
 	PlayDevice     string `short:"p" long:"play-dev"    default:"mono" description:"Sound play device name"`
 	ModelParamPath string `short:"m" long:"model-param" description:"Path to file containing model parameters" required:"true"`
 	KeywordPath    string `short:"k" long:"keyword"     description:"Path to keyword file" required:"true"`
+
+	AwsId          string `short:"a" long:"aws-id"     description:"AWS ID" required:"true"`
+	AwsSecret      string `short:"p" long:"aws-secret" description:"AWS key" required:"true"`
 }
 
 func fail(err error) {
@@ -75,14 +83,6 @@ func makeAnimator(opts options) *chanim.Animator {
 	return animator
 }
 
-func makeHotWordDetector(opts options) hasp.EventSource {
-	hotWordDetector, err := hasp.NewHotWordDetector(opts.CaptureDevice, opts.ModelParamPath, opts.KeywordPath)
-	if err != nil {
-		fail(err)
-	}
-	return hotWordDetector
-}
-
 func makeSoundPlayer(opts options) *hasp.SoundPlayer {
 	player, err := hasp.NewSoundPlayer(opts.PlayDevice, 16000)
 	if err != nil {
@@ -92,19 +92,87 @@ func makeSoundPlayer(opts options) *hasp.SoundPlayer {
 }
 
 func makeCharacter(opts options) *hasp.Character {
-	states := hasp.States{
-		"idle": hasp.NewIdleState(
-			[]string{"lotus", "reading"},
-			time.Duration(2)*time.Minute),
+
+	sess, err := session.NewSession(&aws.Config{
+		Region:      aws.String("us-east-1"),
+		Credentials: credentials.NewStaticCredentials(opts.AwsId, opts.AwsSecret, ""),
+		LogLevel:    aws.LogLevel(aws.LogDebugWithRequestRetries),
+	})
+
+	if err != nil {
+		fmt.Println(sess)
+		return nil
+	} else {
+		fmt.Println("AWS session started...")
 	}
 
-	eventSources := hasp.EventSources{
-		makeHotWordDetector(opts),
+	svc := lexruntimeservice.New(sess)
+
+	states := hasp.States{
+		"idle": hasp.NewIdleState(
+			[]string{"lotus",},
+			time.Duration(2)*time.Minute,
+			hasp.HotWordDetectorParams{
+				CaptureDeviceName: opts.CaptureDevice,
+				KeywordPath:       opts.KeywordPath,
+				ModelPath:         opts.ModelParamPath,
+			},
+		),
+		"tells-help": hasp.NewTellsHelpState(
+			[]string{"tells",},
+			"../wavs/hello-help.wav",
+		),
+		"tells-there": hasp.NewTellsHelpState(
+			[]string{"tells",},
+			"../wavs/still-there.wav",
+		),
+		"tells-aws": hasp.NewTellsState(
+			[]string{"tells",},
+		),
+		"listens": hasp.NewListensState(
+			[]string{"SMS",},
+			opts.CaptureDevice,
+		),
+		"processing": hasp.NewProcessingState(
+			[]string{"calls_typing",},
+			svc,
+		),
+	}
+
+	eventDescs := hasp.EventDescs{
+		hasp.EventDesc{
+			Name: events.HotWordDetectedEventName,
+			Src:  []string{"idle"},
+			Dst:  "tells-help",
+		},
+		hasp.EventDesc{
+			Name: hasp.SoundPlayedEventName,
+			Src:  []string{"tells-help", "tells-aws", "tells-there"},
+			Dst:  "listens",
+		},
+		hasp.EventDesc{
+			Name: events.SoundCapturedEventName,
+			Src:  []string{"listens"},
+			Dst:  "processing",
+		},
+		hasp.EventDesc{
+			Name: events.AwsRepliedEventName,
+			Src:  []string{"processing"},
+			Dst:  "tells-aws",
+		},
+		hasp.EventDesc{
+			Name: events.SoundEmptyEventName,
+			Src:  []string{"listens"},
+			Dst:  "tells-there",
+		},
+	}
+
+	eventSources := events.EventSources{
 	}
 
 	animator := makeAnimator(opts)
 	soundPlayer := makeSoundPlayer(opts)
-	character, err := hasp.NewCharacter("idle", states, nil, eventSources, animator, soundPlayer)
+	character, err := hasp.NewCharacter("idle", states, eventDescs, eventSources, animator, soundPlayer)
 	if err != nil {
 		fail(err)
 	}

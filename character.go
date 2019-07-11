@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/looplab/fsm"
 	"github.com/rmcsoft/chanim"
+	"github.com/rmcsoft/hasp/events"
+
+	"github.com/looplab/fsm"
 )
 
 // EventDesc represents an event when initializing the FSM
@@ -21,14 +23,14 @@ type Character struct {
 	soundPlayer *SoundPlayer
 	fsm         *fsm.FSM
 
-	eventSourceMultiplexer *EventSourceMultiplexer
+	eventSourceMultiplexer *events.EventSourceMultiplexer
 
 	// Event sources that are added when entering the state
 	// and removed when exiting the state
-	stateEventSources []IDEventSource
+	stateEventSources []events.IDEventSource
 
 	// Event sources that are replaced with each StateChangedEvent
-	stateChangedEventSources []IDEventSource
+	stateChangedEventSources []events.IDEventSource
 }
 
 // NewCharacter creates new a Character
@@ -36,21 +38,22 @@ func NewCharacter(
 	initStateName string,
 	states States,
 	eventDescs EventDescs,
-	eventSources EventSources,
+	eventSources events.EventSources,
 	animator *chanim.Animator,
 	soundPlayer *SoundPlayer) (*Character, error) {
 
 	c := &Character{
 		states:                 states,
 		animator:               animator,
-		eventSourceMultiplexer: NewEventSourceMultiplexer(),
+		eventSourceMultiplexer: events.NewEventSourceMultiplexer(),
+		soundPlayer: soundPlayer,
 	}
 
 	// In any of the states, the StateChanged event should lead to updating
-	// the anammation and sound without going to another state.
+	// the animation and sound without going to another state.
 	for stateName := range states {
 		eventDescs = append(eventDescs, EventDesc{
-			Name: StateChangedEventName,
+			Name: events.StateChangedEventName,
 			Src:  []string{stateName},
 			Dst:  stateName,
 		})
@@ -86,6 +89,9 @@ func (c *Character) Run() error {
 	}
 
 	for event := c.eventSourceMultiplexer.NextEvent(); event != nil; {
+
+		fmt.Printf("%s\n", event.Name)
+
 		err := c.fsm.Event(event.Name, event.Args...)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -124,13 +130,13 @@ func (c *Character) enterStateCallbacks(e *fsm.Event) {
 		return
 	}
 
-	eventSources, err := nextState.Enter(Event{e.Event, e.Args})
+	eventSources, err := nextState.Enter(events.Event{e.Event, e.Args})
 	if err != nil {
 		e.Cancel(err)
 	}
 
 	if eventSources != nil {
-		stateEventSources := make([]IDEventSource, 0, len(eventSources))
+		stateEventSources := make([]events.IDEventSource, 0, len(eventSources))
 		for _, eventSource := range eventSources {
 			idEventSource := c.addEventSource(eventSource)
 			stateEventSources = append(stateEventSources, idEventSource)
@@ -141,7 +147,7 @@ func (c *Character) enterStateCallbacks(e *fsm.Event) {
 
 func (c *Character) leaveStateCallback(e *fsm.Event) {
 	if predState, ok := c.states[e.Src]; ok {
-		if !predState.Leave(Event{e.Event, e.Args}) {
+		if !predState.Leave(events.Event{e.Event, e.Args}) {
 			e.Cancel()
 			return
 		}
@@ -189,10 +195,10 @@ func (c *Character) updateCharacter(e *fsm.Event, start bool) {
 	}
 }
 
-func (c *Character) addEventSource(eventSource EventSource) IDEventSource {
+func (c *Character) addEventSource(eventSource events.EventSource) events.IDEventSource {
 	return c.eventSourceMultiplexer.AddEventSource(eventSource)
 }
 
-func (c *Character) removeEventSource(id IDEventSource) {
+func (c *Character) removeEventSource(id events.IDEventSource) {
 	c.eventSourceMultiplexer.RemoveEventSource(id)
 }

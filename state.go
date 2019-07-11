@@ -1,9 +1,11 @@
 package hasp
 
+import hasp "github.com/rmcsoft/hasp/events"
+
 // State defines an interface for states
 type State interface {
-	Enter(event Event) (EventSources, error)
-	Leave(event Event) bool
+	Enter(event hasp.Event) (hasp.EventSources, error)
+	Leave(event hasp.Event) bool
 
 	GetAnimation() string
 	GetSound() []int16
