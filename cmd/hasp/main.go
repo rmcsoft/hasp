@@ -31,7 +31,7 @@ type options struct {
 	KeywordPath    string `short:"k" long:"keyword"     description:"Path to keyword file" required:"true"`
 
 	AwsId          string `short:"a" long:"aws-id"     description:"AWS ID" required:"true"`
-	AwsSecret      string `short:"p" long:"aws-secret" description:"AWS key" required:"true"`
+	AwsSecret      string `short:"w" long:"aws-secret" description:"AWS key" required:"true"`
 }
 
 func fail(err error) {
