@@ -108,6 +108,8 @@ static void destroyDetector(Detector* d) {
 			pv_porcupine_delete(d->porcupine);
 			d->porcupine = NULL;
 		}
+
+		free(d);
 	}
 }
 
