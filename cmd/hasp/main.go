@@ -24,12 +24,10 @@ const (
 type options struct {
 	PackedImageDir string `short:"i" long:"image-dir" description:"Packed image directory needed for animation" required:"true"`
 	UseSDL         bool   `short:"s" long:"use-sdl"   description:"Render with sdl"`
-
 	CaptureDevice  string `short:"c" long:"capture-dev" default:"hw:0" description:"Sound capture device name"`
 	PlayDevice     string `short:"p" long:"play-dev"    default:"mono" description:"Sound play device name"`
 	ModelParamPath string `short:"m" long:"model-param" description:"Path to file containing model parameters" required:"true"`
 	KeywordPath    string `short:"k" long:"keyword"     description:"Path to keyword file" required:"true"`
-
 	AwsId          string `short:"a" long:"aws-id"     description:"AWS ID" required:"true"`
 	AwsSecret      string `short:"w" long:"aws-secret" description:"AWS key" required:"true"`
 }
@@ -110,8 +108,8 @@ func makeCharacter(opts options) *hasp.Character {
 
 	states := hasp.States{
 		"idle": hasp.NewIdleState(
-			[]string{"lotus",},
-			time.Duration(2)*time.Minute,
+			[]string{"lotus", "reading", "giggles", "reading"},
+			time.Duration(10)*time.Second,
 			hasp.HotWordDetectorParams{
 				CaptureDeviceName: opts.CaptureDevice,
 				KeywordPath:       opts.KeywordPath,
@@ -130,7 +128,7 @@ func makeCharacter(opts options) *hasp.Character {
 			[]string{"tells",},
 		),
 		"listens": hasp.NewListensState(
-			[]string{"SMS",},
+			[]string{"silent",},
 			opts.CaptureDevice,
 		),
 		"processing": hasp.NewProcessingState(

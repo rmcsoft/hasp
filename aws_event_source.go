@@ -26,9 +26,10 @@ type awsLexRuntime struct {
 // NewLexEventSource creates LexEventSource
 func NewLexEventSource(lrs *lexruntimeservice.LexRuntimeService, data events.SoundCapturedEventData) (events.EventSource, error) {
 	h := &awsLexRuntime{
-		eventChan: make(chan *events.Event),
-		lrs:       lrs,
-		data:      data,
+		eventChan:  make(chan *events.Event),
+		lrs:        lrs,
+		data:       data,
+		sampleRate: 16000,
 	}
 
 	go h.run()
@@ -47,7 +48,6 @@ func (h *awsLexRuntime) Close() {
 }
 
 func (h *awsLexRuntime) run() {
-
 	req, resp := h.lrs.PostContentRequest(&lexruntimeservice.PostContentInput{
 		BotAlias:    aws.String("Prod"),
 		BotName:     aws.String("HASPBot"),
@@ -83,8 +83,8 @@ func (h *awsLexRuntime) createReaderForSample() io.Reader {
 	var buf []byte
 	bh := (*reflect.SliceHeader)(unsafe.Pointer(&buf))
 	bh.Data = sh.Data
-	bh.Cap = sh.Cap / 2
-	bh.Len = sh.Len / 2
+	bh.Cap = sh.Cap * 2
+	bh.Len = sh.Len * 2
 
 	return bytes.NewBuffer(buf)
 }

@@ -21,7 +21,7 @@ func NewTellsState(availableAnimations []string) State {
 
 func (s *tellsState) Enter(event events.Event) (events.EventSources, error) {
 	fmt.Printf("TellsState Enter\n")
-	data, _ := event.GetSoundCapturedEventData()
+	data, _ := event.GetAwsRepliedEventData()
 	s.data = data.Samples
 	return nil, nil
 }

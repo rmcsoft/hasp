@@ -176,8 +176,8 @@ static int readSamples(Detector* d, int16_t* buf, int maxSampleCount) {
 }
 
 #define DEBUG_VOICE
-#define NOISE_THRESHOLD 5000
-#define NOISE_FRAMES 15
+#define NOISE_THRESHOLD 4000
+#define NOISE_FRAMES 30
 
 static short getMaxLoud(const int16_t* samples, int sampleCount) {
 	int16_t max = 0;
@@ -317,7 +317,7 @@ import (
 )
 
 const (
-	recTime     int64   = int64(time.Duration(6) * time.Second)
+	recTime     int64   = int64(time.Duration(10) * time.Second)
 	sensitivity float32 = 0.5
 )
 
