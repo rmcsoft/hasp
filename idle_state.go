@@ -32,6 +32,7 @@ func (s *idleState) Enter(event events.Event) (events.EventSources, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return events.EventSources{
 		&changeAnimationEventSource{
 			period: s.animationDuration,
@@ -51,7 +52,7 @@ func (s *idleState) GetAnimation() string {
 	return animation
 }
 
-func (*idleState) GetSound() []int16 {
+func (s *idleState) GetSound() []int16 {
 	return nil
 }
 

@@ -61,7 +61,7 @@ func makePaintEngine(opts options) chanim.PaintEngine {
 	var err error
 	var paintEngine chanim.PaintEngine
 	if opts.UseSDL {
-		paintEngine, err = chanim.NewSDLPaintEngine(1024, 600)
+		paintEngine, err = chanim.NewSDLPaintEngine(600, 1024)
 	} else {
 		paintEngine, err = chanim.NewKMSDRMPaintEngine(0, pixFormat)
 	}
@@ -142,12 +142,15 @@ func makeCharacter(opts options) *hasp.Character {
 		"tells-aws": hasp.NewTellsState(
 			[]string{"tells"},
 		),
+		"tells-bye": hasp.NewTellsByeState(
+			[]string{"tells"},
+		),
 		"listens": hasp.NewListensState(
 			[]string{"silent"},
 			hotWordDetector,
 		),
 		"processing": hasp.NewProcessingState(
-			[]string{"calls_typing"},
+			[]string{"SMS",},
 			svc,
 		),
 	}
@@ -172,6 +175,16 @@ func makeCharacter(opts options) *hasp.Character {
 			Name: events.AwsRepliedEventName,
 			Src:  []string{"processing"},
 			Dst:  "tells-aws",
+		},
+		hasp.EventDesc{
+			Name: events.StopEventName,
+			Src:  []string{"processing"},
+			Dst:  "tells-bye",
+		},
+		hasp.EventDesc{
+			Name: hasp.SoundPlayedEventName,
+			Src:  []string{"tells-bye"},
+			Dst:  "idle",
 		},
 		hasp.EventDesc{
 			Name: events.SoundEmptyEventName,

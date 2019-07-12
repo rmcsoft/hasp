@@ -61,21 +61,39 @@ func (h *awsLexRuntime) run() {
 	err := req.Send()
 	fmt.Println(resp, err)
 
+	if err != nil || resp.AudioStream == nil {
+		fmt.Println(err)
+		// h.gotNoReply ?
+		return
+	}
+
 	outbuf, err := ioutil.ReadAll(resp.AudioStream)
-	if err != nil {
+	if err != nil || len(outbuf) == 0 {
 		fmt.Println(err)
 		return
 	}
 
 	r := bytes.NewReader(outbuf)
 	frames := make([]int16, len(outbuf)/2)
-	binary.Read(r, binary.LittleEndian, &frames)
+	err = binary.Read(r, binary.LittleEndian, &frames)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
-	h.gotReply(frames)
+	if *resp.IntentName == "StopIteraction" {
+		h.gotStop(frames)
+	} else {
+		h.gotReply(frames)
+	}
 }
 
 func (h *awsLexRuntime) gotReply(samples []int16) {
 	h.eventChan <- events.NewAwsRepliedEvent(samples, h.sampleRate)
+}
+
+func (h *awsLexRuntime) gotStop(samples []int16) {
+	h.eventChan <- events.NewStopEvent(samples, h.sampleRate)
 }
 
 func (h *awsLexRuntime) createReaderForSamples() io.Reader {

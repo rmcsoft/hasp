@@ -202,7 +202,7 @@ static int readSamples(Detector* d, int16_t* buf, int maxSampleCount) {
 }
 
 #define DEBUG_VOICE
-#define NOISE_THRESHOLD 4000
+#define NOISE_THRESHOLD 5000
 #define NOISE_FRAMES 30
 
 static short getMaxLoud(const int16_t* samples, int sampleCount) {
