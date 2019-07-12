@@ -176,8 +176,8 @@ static int readSamples(Detector* d, int16_t* buf, int maxSampleCount) {
 }
 
 #define DEBUG_VOICE
-#define NOISE_THRESHOLD 5000
-#define NOISE_FRAMES 15
+#define NOISE_THRESHOLD 4000
+#define NOISE_FRAMES 30
 
 static short getMaxLoud(const int16_t* samples, int sampleCount) {
 	int16_t max = 0;
@@ -317,7 +317,7 @@ import (
 )
 
 const (
-	recTime     time.Duration = time.Duration(6) * time.Second
+	recTime     time.Duration = time.Duration(10) * time.Second
 	sensitivity float32       = 0.5
 )
 
@@ -393,7 +393,7 @@ func (h *hotWordDetector) run(doDetect bool) {
 	}
 
 	maxSampleCount := int(recTime) * h.sampleRate / int(time.Second)
-	for h.notStopped() {
+	//for h.notStopped() {
 		fmt.Println(" ===> HotWordDetector loop!!!!!!!!!!!")
 		//time.Sleep(time.Duration(100) * time.Millisecond)
 		buf := make([]int16, maxSampleCount)
@@ -416,7 +416,7 @@ func (h *hotWordDetector) run(doDetect bool) {
 				}
 			}
 		}
-	}
+	//}
 }
 
 func (h *hotWordDetector) notStopped() bool {

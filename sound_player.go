@@ -137,6 +137,11 @@ func (p *SoundPlayer) Play(samples []int16) (hasp.EventSource, error) {
 	asyncPlay := func() *hasp.Event {
 		fmt.Println("StartPlay")
 		sampleCount := len(samples)
+		if sampleCount == 0 {
+			fmt.Println("NothingToPlay")
+			p.closeDev()
+			return &hasp.Event{Name: SoundPlayedEventName}
+		}
 		C.playback(p.dev, (*C.int16_t)(&samples[0]), C.int(sampleCount))
 		p.closeDev()
 		fmt.Println("StopPlay")
