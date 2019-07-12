@@ -46,7 +46,7 @@ func NewCharacter(
 		states:                 states,
 		animator:               animator,
 		eventSourceMultiplexer: events.NewEventSourceMultiplexer(),
-		soundPlayer: soundPlayer,
+		soundPlayer:            soundPlayer,
 	}
 
 	// In any of the states, the StateChanged event should lead to updating
@@ -90,8 +90,6 @@ func (c *Character) Run() error {
 
 	for event := c.eventSourceMultiplexer.NextEvent(); event != nil; {
 
-		fmt.Printf("%s\n", event.Name)
-
 		err := c.fsm.Event(event.Name, event.Args...)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -130,7 +128,7 @@ func (c *Character) enterStateCallbacks(e *fsm.Event) {
 		return
 	}
 
-	eventSources, err := nextState.Enter(events.Event{e.Event, e.Args})
+	eventSources, err := nextState.Enter(events.Event{Name: e.Event, Args: e.Args})
 	if err != nil {
 		e.Cancel(err)
 	}
@@ -147,7 +145,7 @@ func (c *Character) enterStateCallbacks(e *fsm.Event) {
 
 func (c *Character) leaveStateCallback(e *fsm.Event) {
 	if predState, ok := c.states[e.Src]; ok {
-		if !predState.Leave(events.Event{e.Event, e.Args}) {
+		if !predState.Leave(events.Event{Name: e.Event, Args: e.Args}) {
 			e.Cancel()
 			return
 		}

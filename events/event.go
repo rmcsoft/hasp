@@ -51,11 +51,13 @@ func (esm *EventSourceMultiplexer) NextEvent() *Event {
 			return nil
 		}
 
-		_, ok = esm.eventSources[e.idEventSource]
+		es, ok := esm.eventSources[e.idEventSource]
 		if !ok { // The event is still relevant?
 			continue
 		}
 
+		fmt.Printf("NextEvent: Source=%s, Name=%s\n",
+			es.src.Name(), e.event.Name)
 		return e.event
 	}
 }
