@@ -53,7 +53,7 @@ func (h *awsLexRuntime) run() {
 		BotName:     aws.String("HASPBot"),
 		ContentType: aws.String("audio/l16; rate=16000; channels=1"),
 		UserId:      aws.String("go_user1"),
-		InputStream: aws.ReadSeekCloser(h.createReaderForSample()),
+		InputStream: aws.ReadSeekCloser(h.createReaderForSamples()),
 		Accept:      aws.String("audio/pcm"),
 	})
 
@@ -78,7 +78,7 @@ func (h *awsLexRuntime) gotReply(samples []int16) {
 	h.eventChan <- events.NewAwsRepliedEvent(samples, h.sampleRate)
 }
 
-func (h *awsLexRuntime) createReaderForSample() io.Reader {
+func (h *awsLexRuntime) createReaderForSamples() io.Reader {
 	sh := (*reflect.SliceHeader)(unsafe.Pointer(&h.data.Samples))
 	var buf []byte
 	bh := (*reflect.SliceHeader)(unsafe.Pointer(&buf))
