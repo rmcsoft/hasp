@@ -9,6 +9,7 @@ import (
 	"github.com/rmcsoft/chanim"
 	"github.com/rmcsoft/hasp"
 	"github.com/rmcsoft/hasp/events"
+	"github.com/rmcsoft/hasp/sound"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -81,22 +82,22 @@ func makeAnimator(opts options) *chanim.Animator {
 	return animator
 }
 
-func makeSoundPlayer(opts options) *hasp.SoundPlayer {
-	player, err := hasp.NewSoundPlayer(opts.PlayDevice, 16000)
+func makeSoundPlayer(opts options) *sound.SoundPlayer {
+	player, err := sound.NewSoundPlayer(opts.PlayDevice, 16000)
 	if err != nil {
 		fail(err)
 	}
 	return player
 }
 
-func makeHotWordDetector(opts options) *hasp.HotWordDetector {
-	params := hasp.HotWordDetectorParams{
+func makeHotWordDetector(opts options) *sound.HotWordDetector {
+	params := sound.HotWordDetectorParams{
 		CaptureDeviceName: opts.CaptureDevice,
 		KeywordPath:       opts.KeywordPath,
 		ModelPath:         opts.ModelParamPath,
 	}
 
-	hotWordDetector, err := hasp.NewHotWordDetector(params)
+	hotWordDetector, err := sound.NewHotWordDetector(params)
 	if err != nil {
 		fail(err)
 	}
@@ -150,7 +151,7 @@ func makeCharacter(opts options) *hasp.Character {
 			hotWordDetector,
 		),
 		"processing": hasp.NewProcessingState(
-			[]string{"SMS",},
+			[]string{"SMS"},
 			svc,
 		),
 		"goodbye": hasp.NewIdleState(
@@ -162,17 +163,17 @@ func makeCharacter(opts options) *hasp.Character {
 
 	eventDescs := hasp.EventDescs{
 		hasp.EventDesc{
-			Name: events.HotWordDetectedEventName,
+			Name: sound.HotWordDetectedEventName,
 			Src:  []string{"idle"},
 			Dst:  "tells-help",
 		},
 		hasp.EventDesc{
-			Name: hasp.SoundPlayedEventName,
+			Name: sound.SoundPlayedEventName,
 			Src:  []string{"tells-help", "tells-aws", "tells-there"},
 			Dst:  "listens",
 		},
 		hasp.EventDesc{
-			Name: events.SoundCapturedEventName,
+			Name: sound.SoundCapturedEventName,
 			Src:  []string{"listens"},
 			Dst:  "processing",
 		},
@@ -187,17 +188,17 @@ func makeCharacter(opts options) *hasp.Character {
 			Dst:  "tells-bye",
 		},
 		hasp.EventDesc{
-			Name: hasp.SoundPlayedEventName,
+			Name: sound.SoundPlayedEventName,
 			Src:  []string{"goodbye"},
 			Dst:  "goodbye",
 		},
 		hasp.EventDesc{
-			Name: hasp.SoundPlayedEventName,
+			Name: sound.SoundPlayedEventName,
 			Src:  []string{"goodbye"},
 			Dst:  "idle",
 		},
 		hasp.EventDesc{
-			Name: events.SoundEmptyEventName,
+			Name: sound.SoundEmptyEventName,
 			Src:  []string{"listens"},
 			Dst:  "tells-there",
 		},

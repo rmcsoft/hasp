@@ -6,18 +6,19 @@ import (
 	"time"
 
 	"github.com/rmcsoft/hasp/events"
+	"github.com/rmcsoft/hasp/sound"
 )
 
 type idleState struct {
 	availableAnimations []string
 	animationDuration   time.Duration
 	currentAnimation    int
-	hotWordDetector     *HotWordDetector
+	hotWordDetector     *sound.HotWordDetector
 }
 
 // NewIdleState creates new IdleState
 func NewIdleState(availableAnimations []string, animationDuration time.Duration,
-	hotWordDetector *HotWordDetector) State {
+	hotWordDetector *sound.HotWordDetector) State {
 
 	return &idleState{
 		availableAnimations: availableAnimations,

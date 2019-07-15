@@ -1,8 +1,10 @@
-package events
+package sound
 
 import (
 	"errors"
 	"fmt"
+
+	"github.com/rmcsoft/hasp/events"
 )
 
 // HotWordDetectedEventData is the HotWordDetectedEvent data
@@ -17,8 +19,8 @@ const (
 )
 
 // NewHotWordDetectedEvent creates HotWordDetectedEvent
-func NewHotWordDetectedEvent(samples []int16, sampleRate int) *Event {
-	return &Event{
+func NewHotWordDetectedEvent(samples []int16, sampleRate int) *events.Event {
+	return &events.Event{
 		Name: HotWordDetectedEventName,
 		Args: []interface{}{
 			HotWordDetectedEventData{samples, sampleRate},
@@ -27,7 +29,7 @@ func NewHotWordDetectedEvent(samples []int16, sampleRate int) *Event {
 }
 
 // GetHotWordDetectedEventData gets HotWordDetectedEvent data
-func (event *Event) GetHotWordDetectedEventData() (HotWordDetectedEventData, error) {
+func GetHotWordDetectedEventData(event *events.Event) (HotWordDetectedEventData, error) {
 	if event.Name != HotWordDetectedEventName {
 		return HotWordDetectedEventData{},
 			fmt.Errorf("The event must be named %s", HotWordDetectedEventName)

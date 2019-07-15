@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/jessevdk/go-flags"
-	"github.com/rmcsoft/hasp"
+	"github.com/rmcsoft/hasp/sound"
 )
 
 type options struct {
@@ -39,13 +39,13 @@ func parseCmd() options {
 func main() {
 	opts := parseCmd()
 
-	hotWordDetectorParams := hasp.HotWordDetectorParams{
+	hotWordDetectorParams := sound.HotWordDetectorParams{
 		CaptureDeviceName: opts.CaptureDevice,
 		ModelPath:         opts.ModelParamPath,
 		KeywordPath:       opts.KeywordPath,
 	}
 
-	hotWordDetector, err := hasp.NewHotWordDetector(hotWordDetectorParams)
+	hotWordDetector, err := sound.NewHotWordDetector(hotWordDetectorParams)
 	if err != nil {
 		fail(err)
 	}
@@ -61,7 +61,7 @@ func main() {
 		select {
 		case event, ok := <-eventSource.Events():
 			if ok {
-				d, _ := event.GetHotWordDetectedEventData()
+				d, _ := sound.GetHotWordDetectedEventData(event)
 				fmt.Printf("samplesCount=%v, sampleRate=%v\n", len(d.Samples), d.SampleRate)
 			} else {
 				eventSource, err = hotWordDetector.StartDetect()

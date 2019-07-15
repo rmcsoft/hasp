@@ -5,6 +5,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/lexruntimeservice"
 	"github.com/rmcsoft/hasp/events"
+	"github.com/rmcsoft/hasp/sound"
 )
 
 type processingState struct {
@@ -24,7 +25,7 @@ func NewProcessingState(availableAnimations []string, lrs *lexruntimeservice.Lex
 func (s *processingState) Enter(event events.Event) (events.EventSources, error) {
 	fmt.Printf("ProcessingState Enter\n")
 
-	data, _ := event.GetSoundCapturedEventData()
+	data, _ := sound.GetSoundCapturedEventData(&event)
 	soundCapturer, err := NewLexEventSource(s.lrs, data)
 	if err != nil {
 		panic(err)

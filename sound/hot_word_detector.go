@@ -1,12 +1,12 @@
-package hasp
+package sound
 
 /*
 #cgo pkg-config: alsa
 
 // Porcupine
-#cgo CFLAGS: -I${SRCDIR}/../Porcupine/include
-#cgo linux,amd64 LDFLAGS: -L${SRCDIR}/../Porcupine/lib/linux/x86_64
-#cgo linux,arm   LDFLAGS: -L${SRCDIR}/../Porcupine/lib/beaglebone
+#cgo CFLAGS: -I${SRCDIR}/../../Porcupine/include
+#cgo linux,amd64 LDFLAGS: -L${SRCDIR}/../../Porcupine/lib/linux/x86_64
+#cgo linux,arm   LDFLAGS: -L${SRCDIR}/../../Porcupine/lib/beaglebone
 #cgo LDFLAGS: -lpv_porcupine
 
 #include <errno.h>
@@ -494,7 +494,7 @@ func (d *HotWordDetector) doDetectHotWord(session *hotWordDetectorSession) {
 	}
 
 	samples := buf[0:sampleCount]
-	session.eventChan <- events.NewHotWordDetectedEvent(samples, d.GetSampleRate())
+	session.eventChan <- NewHotWordDetectedEvent(samples, d.GetSampleRate())
 }
 
 func (d *HotWordDetector) doSoundCapture(session *hotWordDetectorSession) {
@@ -509,9 +509,9 @@ func (d *HotWordDetector) doSoundCapture(session *hotWordDetectorSession) {
 
 	samples := buf[0:sampleCount]
 	if len(samples) > 0 {
-		session.eventChan <- events.NewSoundCapturedEvent(samples, d.GetSampleRate())
+		session.eventChan <- NewSoundCapturedEvent(samples, d.GetSampleRate())
 	} else {
-		session.eventChan <- events.NewSoundEmptyEvent()
+		session.eventChan <- NewSoundEmptyEvent()
 	}
 }
 

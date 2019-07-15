@@ -4,16 +4,17 @@ import (
 	"fmt"
 
 	"github.com/rmcsoft/hasp/events"
+	"github.com/rmcsoft/hasp/sound"
 )
 
 type listensState struct {
 	availableAnimations []string
 	currentAnimation    int
-	detector            *HotWordDetector
+	detector            *sound.HotWordDetector
 }
 
 // NewListensState creates new ListensState
-func NewListensState(availableAnimations []string, detector *HotWordDetector) State {
+func NewListensState(availableAnimations []string, detector *sound.HotWordDetector) State {
 	return &listensState{
 		availableAnimations: availableAnimations,
 		detector:            detector,

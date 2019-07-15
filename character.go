@@ -6,6 +6,7 @@ import (
 
 	"github.com/rmcsoft/chanim"
 	"github.com/rmcsoft/hasp/events"
+	"github.com/rmcsoft/hasp/sound"
 
 	"github.com/looplab/fsm"
 )
@@ -20,7 +21,7 @@ type EventDescs = []EventDesc
 type Character struct {
 	states      States
 	animator    *chanim.Animator
-	soundPlayer *SoundPlayer
+	soundPlayer *sound.SoundPlayer
 	fsm         *fsm.FSM
 
 	eventSourceMultiplexer *events.EventSourceMultiplexer
@@ -40,7 +41,7 @@ func NewCharacter(
 	eventDescs EventDescs,
 	eventSources events.EventSources,
 	animator *chanim.Animator,
-	soundPlayer *SoundPlayer) (*Character, error) {
+	soundPlayer *sound.SoundPlayer) (*Character, error) {
 
 	c := &Character{
 		states:                 states,

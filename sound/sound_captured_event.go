@@ -1,8 +1,10 @@
-package events
+package sound
 
 import (
 	"errors"
 	"fmt"
+
+	"github.com/rmcsoft/hasp/events"
 )
 
 type SoundCapturedEventData struct {
@@ -14,25 +16,25 @@ const (
 	SoundCapturedEventName = "SoundCaptured"
 )
 
-// NewHotWordDetectedEvent creates HotWordDetectedEvent
-func NewSoundCapturedEvent(samples []int16, sampleRate int) *Event {
-	return &Event{
+// NewSoundCapturedEvent creates HotWordDetectedEvent
+func NewSoundCapturedEvent(samples []int16, sampleRate int) *events.Event {
+	return &events.Event{
 		Name: SoundCapturedEventName,
 		Args: []interface{}{
-			SoundCapturedEventData {samples, sampleRate},
+			SoundCapturedEventData{samples, sampleRate},
 		},
 	}
 }
 
-// GetHotWordDetectedEventData gets HotWordDetectedEvent data
-func (event *Event) GetSoundCapturedEventData() (SoundCapturedEventData, error) {
+// GetSoundCapturedEventData gets HotWordDetectedEvent data
+func GetSoundCapturedEventData(event *events.Event) (SoundCapturedEventData, error) {
 	if event.Name != SoundCapturedEventName {
-		return SoundCapturedEventData {},
+		return SoundCapturedEventData{},
 			fmt.Errorf("The event must be named %s", SoundCapturedEventName)
 	}
 
 	if len(event.Args) != 1 {
-		return SoundCapturedEventData {},
+		return SoundCapturedEventData{},
 			errors.New("Event does not data")
 	}
 

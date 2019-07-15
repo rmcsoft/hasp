@@ -15,17 +15,18 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/lexruntimeservice"
 	"github.com/rmcsoft/hasp/events"
+	"github.com/rmcsoft/hasp/sound"
 )
 
 type awsLexRuntime struct {
 	eventChan  chan *events.Event
 	lrs        *lexruntimeservice.LexRuntimeService
-	data       events.SoundCapturedEventData
+	data       sound.SoundCapturedEventData
 	sampleRate int
 }
 
 // NewLexEventSource creates LexEventSource
-func NewLexEventSource(lrs *lexruntimeservice.LexRuntimeService, data events.SoundCapturedEventData) (events.EventSource, error) {
+func NewLexEventSource(lrs *lexruntimeservice.LexRuntimeService, data sound.SoundCapturedEventData) (events.EventSource, error) {
 	h := &awsLexRuntime{
 		eventChan:  make(chan *events.Event),
 		lrs:        lrs,

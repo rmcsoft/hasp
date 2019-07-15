@@ -1,4 +1,6 @@
-package events
+package sound
+
+import "github.com/rmcsoft/hasp/events"
 
 type SoundEmptyEventData struct {
 }
@@ -8,12 +10,11 @@ const (
 )
 
 // NewSoundEmptyEvent creates SoundEmptyEvent
-func NewSoundEmptyEvent() *Event {
-	return &Event{
+func NewSoundEmptyEvent() *events.Event {
+	return &events.Event{
 		Name: SoundEmptyEventName,
 		Args: []interface{}{
-			SoundEmptyEventData { },
+			SoundEmptyEventData{},
 		},
 	}
 }
-
