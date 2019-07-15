@@ -12,6 +12,7 @@ type listensState struct {
 	detector            *HotWordDetector
 }
 
+// NewListensState creates new ListensState
 func NewListensState(availableAnimations []string, detector *HotWordDetector) State {
 	return &listensState{
 		availableAnimations: availableAnimations,

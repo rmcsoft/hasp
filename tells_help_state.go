@@ -16,7 +16,7 @@ type tellsHelpState struct {
 	welcomeSpeech       []int16
 }
 
-// NewAwakeState creates new IdleState
+// NewTellsHelpState creates new IdleState
 func NewTellsHelpState(availableAnimations []string, welcomeSpeech string) State {
 	content, err := ioutil.ReadFile(welcomeSpeech)
 	if err != nil {
@@ -24,12 +24,12 @@ func NewTellsHelpState(availableAnimations []string, welcomeSpeech string) State
 	}
 
 	r := bytes.NewReader(content)
-	frames := make([]int16, len(content) / 2)
+	frames := make([]int16, len(content)/2)
 	binary.Read(r, binary.LittleEndian, &frames)
 
-	return &tellsHelpState {
+	return &tellsHelpState{
 		availableAnimations: availableAnimations,
-		welcomeSpeech: frames,
+		welcomeSpeech:       frames,
 	}
 }
 

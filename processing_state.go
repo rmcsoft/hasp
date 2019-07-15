@@ -13,6 +13,7 @@ type processingState struct {
 	lrs                 *lexruntimeservice.LexRuntimeService
 }
 
+// NewProcessingState creates new ProcessingState
 func NewProcessingState(availableAnimations []string, lrs *lexruntimeservice.LexRuntimeService) State {
 	return &processingState{
 		availableAnimations: availableAnimations,

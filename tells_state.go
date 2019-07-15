@@ -12,7 +12,7 @@ type tellsState struct {
 	data                []int16
 }
 
-// NewAwakeState creates new IdleState
+// NewTellsState creates new IdleState
 func NewTellsState(availableAnimations []string) State {
 	return &tellsState{
 		availableAnimations: availableAnimations,
