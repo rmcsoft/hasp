@@ -8,9 +8,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
-	"reflect"
-	"unsafe"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/lexruntimeservice"
@@ -19,19 +16,17 @@ import (
 )
 
 type awsLexRuntime struct {
-	eventChan  chan *events.Event
-	lrs        *lexruntimeservice.LexRuntimeService
-	data       sound.SoundCapturedEventData
-	sampleRate int
+	eventChan chan *events.Event
+	lrs       *lexruntimeservice.LexRuntimeService
+	audioData *sound.AudioData
 }
 
 // NewLexEventSource creates LexEventSource
-func NewLexEventSource(lrs *lexruntimeservice.LexRuntimeService, data sound.SoundCapturedEventData) (events.EventSource, error) {
+func NewLexEventSource(lrs *lexruntimeservice.LexRuntimeService, audioData *sound.AudioData) (events.EventSource, error) {
 	h := &awsLexRuntime{
-		eventChan:  make(chan *events.Event),
-		lrs:        lrs,
-		data:       data,
-		sampleRate: 16000,
+		eventChan: make(chan *events.Event),
+		lrs:       lrs,
+		audioData: audioData,
 	}
 
 	go h.run()
@@ -53,9 +48,9 @@ func (h *awsLexRuntime) run() {
 	req, resp := h.lrs.PostContentRequest(&lexruntimeservice.PostContentInput{
 		BotAlias:    aws.String("Prod"),
 		BotName:     aws.String("HASPBot"),
-		ContentType: aws.String("audio/l16; rate=16000; channels=1"),
+		ContentType: aws.String(h.audioData.Mime()),
 		UserId:      aws.String("go_user1"),
-		InputStream: aws.ReadSeekCloser(h.createReaderForSamples()),
+		InputStream: h.makeInputStream(),
 		Accept:      aws.String("audio/pcm"),
 	})
 
@@ -91,24 +86,15 @@ func (h *awsLexRuntime) run() {
 }
 
 func (h *awsLexRuntime) gotReply(samples []int16) {
-	h.eventChan <- events.NewAwsRepliedEvent(samples, h.sampleRate)
+	h.eventChan <- events.NewAwsRepliedEvent(samples, 16000)
 }
 
 func (h *awsLexRuntime) gotStop(samples []int16) {
-	h.eventChan <- events.NewStopEvent(samples, h.sampleRate)
+	h.eventChan <- events.NewStopEvent(samples, 16000)
 }
 
-func (h *awsLexRuntime) createReaderForSamples() io.Reader {
-	sh := (*reflect.SliceHeader)(unsafe.Pointer(&h.data.Samples))
-	var buf []byte
-	bh := (*reflect.SliceHeader)(unsafe.Pointer(&buf))
-	bh.Data = sh.Data
-	bh.Cap = sh.Cap * 2
-	bh.Len = sh.Len * 2
-
-	f, _ := os.Create("/tmp/data")
-	defer f.Close()
-	f.Write(buf)
-
-	return bytes.NewBuffer(buf)
+func (h *awsLexRuntime) makeInputStream() io.ReadSeeker {
+	samples := h.audioData.Samples()
+	reader := bytes.NewReader(samples)
+	return aws.ReadSeekCloser(reader)
 }

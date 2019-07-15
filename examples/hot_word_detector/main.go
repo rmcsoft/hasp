@@ -62,7 +62,9 @@ func main() {
 		case event, ok := <-eventSource.Events():
 			if ok {
 				d, _ := sound.GetHotWordDetectedEventData(event)
-				fmt.Printf("samplesCount=%v, sampleRate=%v\n", len(d.Samples), d.SampleRate)
+				fmt.Printf("samplesCount=%v, sampleRate=%v\n",
+					d.AudioData.SampleCount(),
+					d.AudioData.SampleRate())
 			} else {
 				eventSource, err = hotWordDetector.StartDetect()
 				if err != nil {

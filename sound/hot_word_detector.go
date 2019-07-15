@@ -334,6 +334,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/rmcsoft/hasp/events"
 )
@@ -399,8 +400,8 @@ func (d *HotWordDetector) Destroy() {
 	close(d.sessionChan)
 }
 
-// GetSampleRate gets sample rate
-func (d *HotWordDetector) GetSampleRate() int {
+// SampleRate gets sample rate
+func (d *HotWordDetector) SampleRate() int {
 	return int(d.detector.sampleRate)
 }
 
@@ -471,10 +472,16 @@ func (d *HotWordDetector) runSession(session *hotWordDetectorSession) {
 	}
 }
 
-func (d *HotWordDetector) makeSampleBuf() (buf []int16, maxSampleCount int) {
-	maxSampleCount = int(recTime * int64(d.GetSampleRate()) / int64(time.Second))
-	buf = make([]int16, maxSampleCount)
+func (d *HotWordDetector) makeSampleBuf() (buf []byte, cptr *C.int16_t, maxSampleCount int) {
+	maxSampleCount = int(recTime * int64(d.SampleRate()) / int64(time.Second))
+	buf = make([]byte, maxSampleCount*S16LE.Size())
+	cptr = (*C.int16_t)(unsafe.Pointer(&buf[0]))
 	return
+}
+
+func (d *HotWordDetector) makeAudioData(buf []byte, sampleCount C.int) *AudioData {
+	sizeInBytes := int(sampleCount) * S16LE.Size()
+	return NewMonoS16LE(buf[0:sizeInBytes], d.SampleRate())
 }
 
 func (d *HotWordDetector) handleError(session *hotWordDetectorSession, op string, errcode int) {
@@ -486,22 +493,21 @@ func (d *HotWordDetector) handleError(session *hotWordDetectorSession, op string
 func (d *HotWordDetector) doDetectHotWord(session *hotWordDetectorSession) {
 	// fmt.Println("HotWordDetector.doDetectHotWord")
 
-	buf, maxSampleCount := d.makeSampleBuf()
-	sampleCount := C.detect(d.detector, (*C.int16_t)(&buf[0]), C.int(maxSampleCount))
+	buf, cptr, maxSampleCount := d.makeSampleBuf()
+	sampleCount := C.detect(d.detector, cptr, C.int(maxSampleCount))
 	if sampleCount < 0 {
 		d.handleError(session, "HotWordDetect", int(sampleCount))
 		return
 	}
 
-	samples := buf[0:sampleCount]
-	session.eventChan <- NewHotWordDetectedEvent(samples, d.GetSampleRate())
+	session.eventChan <- NewHotWordDetectedEvent(d.makeAudioData(buf, sampleCount))
 }
 
 func (d *HotWordDetector) doSoundCapture(session *hotWordDetectorSession) {
 	// fmt.Println("HotWordDetector.doSoundCapture")
 
-	buf, maxSampleCount := d.makeSampleBuf()
-	sampleCount := C.soundCapture(d.detector, (*C.int16_t)(&buf[0]), C.int(maxSampleCount))
+	buf, cptr, maxSampleCount := d.makeSampleBuf()
+	sampleCount := C.soundCapture(d.detector, cptr, C.int(maxSampleCount))
 	if sampleCount < 0 {
 		d.handleError(session, "SoundCapture", int(sampleCount))
 		return
@@ -509,7 +515,7 @@ func (d *HotWordDetector) doSoundCapture(session *hotWordDetectorSession) {
 
 	samples := buf[0:sampleCount]
 	if len(samples) > 0 {
-		session.eventChan <- NewSoundCapturedEvent(samples, d.GetSampleRate())
+		session.eventChan <- NewSoundCapturedEvent(d.makeAudioData(buf, sampleCount))
 	} else {
 		session.eventChan <- NewSoundEmptyEvent()
 	}

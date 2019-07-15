@@ -26,7 +26,7 @@ func (s *processingState) Enter(event events.Event) (events.EventSources, error)
 	fmt.Printf("ProcessingState Enter\n")
 
 	data, _ := sound.GetSoundCapturedEventData(&event)
-	soundCapturer, err := NewLexEventSource(s.lrs, data)
+	soundCapturer, err := NewLexEventSource(s.lrs, data.AudioData)
 	if err != nil {
 		panic(err)
 	}

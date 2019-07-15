@@ -8,8 +8,7 @@ import (
 )
 
 type SoundCapturedEventData struct {
-	Samples    []int16
-	SampleRate int
+	AudioData *AudioData
 }
 
 const (
@@ -17,11 +16,11 @@ const (
 )
 
 // NewSoundCapturedEvent creates HotWordDetectedEvent
-func NewSoundCapturedEvent(samples []int16, sampleRate int) *events.Event {
+func NewSoundCapturedEvent(audioData *AudioData) *events.Event {
 	return &events.Event{
 		Name: SoundCapturedEventName,
 		Args: []interface{}{
-			SoundCapturedEventData{samples, sampleRate},
+			SoundCapturedEventData{audioData},
 		},
 	}
 }

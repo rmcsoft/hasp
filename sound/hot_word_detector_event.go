@@ -9,8 +9,7 @@ import (
 
 // HotWordDetectedEventData is the HotWordDetectedEvent data
 type HotWordDetectedEventData struct {
-	Samples    []int16
-	SampleRate int
+	AudioData *AudioData
 }
 
 const (
@@ -19,11 +18,11 @@ const (
 )
 
 // NewHotWordDetectedEvent creates HotWordDetectedEvent
-func NewHotWordDetectedEvent(samples []int16, sampleRate int) *events.Event {
+func NewHotWordDetectedEvent(audioData *AudioData) *events.Event {
 	return &events.Event{
 		Name: HotWordDetectedEventName,
 		Args: []interface{}{
-			HotWordDetectedEventData{samples, sampleRate},
+			HotWordDetectedEventData{audioData},
 		},
 	}
 }

@@ -1,5 +1,9 @@
 package sound
 
+import (
+	"fmt"
+)
+
 // SampleType is numerical representation of sample
 type SampleType int
 
@@ -43,6 +47,11 @@ func (a *AudioData) Format() AudioFormat {
 	return a.format
 }
 
+// ChannelCount gets channel count
+func (a *AudioData) ChannelCount() int {
+	return a.format.ChannelCount
+}
+
 // SampleType gets sample type
 func (a *AudioData) SampleType() SampleType {
 	return a.format.SampleType
@@ -63,11 +72,30 @@ func (a *AudioData) SampleCount() int {
 	return len(a.samples) / a.SampleSize()
 }
 
+// Mime gets MIME for AudioData
+func (a *AudioData) Mime() string {
+	return fmt.Sprintf("audio/%v; rate=%v; channels=%v",
+		a.SampleType().Mime(),
+		a.SampleRate(),
+		a.ChannelCount(),
+	)
+}
+
 // Size returns sample size
 func (st SampleType) Size() int {
 	switch st {
 	case S16LE:
 		return 2
+	default:
+		panic("Invalid SampleType")
+	}
+}
+
+// Mime gets MIME for SampleType
+func (st SampleType) Mime() string {
+	switch st {
+	case S16LE:
+		return "l16"
 	default:
 		panic("Invalid SampleType")
 	}
