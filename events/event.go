@@ -32,14 +32,14 @@ type EventSourceMultiplexer struct {
 	idSeq IDEventSource
 
 	multiplexer  chan event
-	eventSources map[IDEventSource]*eventSourceCtrl
+	eventSources map[IDEventSource]EventSource
 }
 
 // NewEventSourceMultiplexer creates new EventSourceMultiplexer
 func NewEventSourceMultiplexer() *EventSourceMultiplexer {
 	return &EventSourceMultiplexer{
 		multiplexer:  make(chan event, 64),
-		eventSources: make(map[IDEventSource]*eventSourceCtrl),
+		eventSources: make(map[IDEventSource]EventSource),
 	}
 }
 
@@ -57,23 +57,18 @@ func (esm *EventSourceMultiplexer) NextEvent() *Event {
 		}
 
 		fmt.Printf("NextEvent: Source=%s, Name=%s\n",
-			es.src.Name(), e.event.Name)
+			es.Name(), e.event.Name)
 		return e.event
 	}
 }
 
 // AddEventSource adds new event source
-func (esm *EventSourceMultiplexer) AddEventSource(src EventSource) IDEventSource {
+func (esm *EventSourceMultiplexer) AddEventSource(eventSource EventSource) IDEventSource {
 	id := esm.idSeq
 	esm.idSeq++
 
-	newEventSourceCtrl := &eventSourceCtrl{
-		src:  src,
-		quit: make(chan bool, 1),
-	}
-
-	esm.eventSources[id] = newEventSourceCtrl
-	go esm.runEventSource(id, newEventSourceCtrl)
+	esm.eventSources[id] = eventSource
+	go esm.runEventSource(id, eventSource)
 
 	return id
 }
@@ -81,15 +76,14 @@ func (esm *EventSourceMultiplexer) AddEventSource(src EventSource) IDEventSource
 // RemoveEventSource removes event source
 func (esm *EventSourceMultiplexer) RemoveEventSource(id IDEventSource) {
 	if eventSource, ok := esm.eventSources[id]; ok {
-		eventSource.quit <- true
+		eventSource.Close()
 		delete(esm.eventSources, id)
 	}
 }
 
 type eventSourceCtrl struct {
-	src      EventSource
-	quit     chan bool
-	finished bool
+	src  EventSource
+	quit chan bool
 }
 
 type event struct {
@@ -97,24 +91,10 @@ type event struct {
 	event         *Event
 }
 
-func (esm *EventSourceMultiplexer) runEventSource(id IDEventSource, ctrl *eventSourceCtrl) {
-	fmt.Printf("EventSource '%s' running\n", ctrl.src.Name())
-	defer fmt.Printf("EventSource '%s' stopped\n", ctrl.src.Name())
-
-	for {
-		select {
-		case e, ok := <-ctrl.src.Events():
-			if ok {
-				esm.multiplexer <- event{id, e}
-			} else {
-				return
-			}
-		case <-ctrl.quit:
-			ctrl.src.Close()
-			for _, ok := <-ctrl.src.Events(); ok; {
-			}
-
-			return
-		}
+func (esm *EventSourceMultiplexer) runEventSource(id IDEventSource, eventSource EventSource) {
+	fmt.Printf("EventSource '%s' running\n", eventSource.Name())
+	for e := range eventSource.Events() {
+		esm.multiplexer <- event{id, e}
 	}
+	fmt.Printf("EventSource '%s' stopped\n", eventSource.Name())
 }
