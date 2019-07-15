@@ -16,17 +16,21 @@ import (
 )
 
 type awsLexRuntime struct {
-	eventChan chan *events.Event
-	lrs       *lexruntimeservice.LexRuntimeService
-	audioData *sound.AudioData
+	eventChan  chan *events.Event
+	lrs        *lexruntimeservice.LexRuntimeService
+	data       sound.SoundCapturedEventData
+	sampleRate int
+	userId     string
 }
 
 // NewLexEventSource creates LexEventSource
-func NewLexEventSource(lrs *lexruntimeservice.LexRuntimeService, audioData *sound.AudioData) (events.EventSource, error) {
+func NewLexEventSource(lrs *lexruntimeservice.LexRuntimeService,
+	audioData *sound.AudioData, userId string) (events.EventSource, error) {
 	h := &awsLexRuntime{
-		eventChan: make(chan *events.Event),
-		lrs:       lrs,
+		eventChan:  make(chan *events.Event),
+		lrs:        lrs,
 		audioData: audioData,
+		userId:     userId,
 	}
 
 	go h.run()
@@ -49,7 +53,7 @@ func (h *awsLexRuntime) run() {
 		BotAlias:    aws.String("Prod"),
 		BotName:     aws.String("HASPBot"),
 		ContentType: aws.String(h.audioData.Mime()),
-		UserId:      aws.String("go_user1"),
+		UserId:      aws.String(h.userId),
 		InputStream: h.makeInputStream(),
 		Accept:      aws.String("audio/pcm"),
 	})

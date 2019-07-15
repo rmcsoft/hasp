@@ -4,8 +4,8 @@ import hasp "github.com/rmcsoft/hasp/events"
 
 // State defines an interface for states
 type State interface {
-	Enter(event hasp.Event) (hasp.EventSources, error)
-	Leave(event hasp.Event) bool
+	Enter(ctx CharacterCtx, event hasp.Event) (hasp.EventSources, error)
+	Leave(ctx CharacterCtx, event hasp.Event) bool
 
 	GetAnimation() string
 	GetSound() []int16

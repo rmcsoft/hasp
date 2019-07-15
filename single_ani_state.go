@@ -17,13 +17,15 @@ func NewSingleAniState(animation string) State {
 	}
 }
 
-func (s *singleAniState) Enter(event events.Event) (events.EventSources, error) {
+func (s *singleAniState) Enter(ctx CharacterCtx, event events.Event) (events.EventSources, error) {
 	fmt.Printf("SingleAniState Enter\n")
 
-	return nil, nil
+	return events.EventSources{ events.NewSingleEventSource(events.StateGoIdleName, func() *events.Event {
+		return &events.Event { Name: events.StateGoIdleName }
+	})}, nil
 }
 
-func (s *singleAniState) Leave(event events.Event) bool {
+func (s *singleAniState) Leave(ctx CharacterCtx, event events.Event) bool {
 	fmt.Printf("SingleAniState Leave\n")
 	return true
 }

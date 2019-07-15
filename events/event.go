@@ -13,6 +13,7 @@ type Event struct {
 // StateChangedEventName An event means that the current state has changed and
 // need to update the animation and sound without naming the current state
 const StateChangedEventName = "StateChanged"
+const StateGoIdleName = "GoIdle"
 
 // IDEventSource type to identify event sources
 type IDEventSource = uint64

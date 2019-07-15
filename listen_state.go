@@ -21,7 +21,7 @@ func NewListensState(availableAnimations []string, detector *sound.HotWordDetect
 	}
 }
 
-func (s *listensState) Enter(event events.Event) (events.EventSources, error) {
+func (s *listensState) Enter(ctx CharacterCtx, event events.Event) (events.EventSources, error) {
 	fmt.Printf("ListensState Enter\n")
 
 	soundCapturerEventSource, err := s.detector.StartSoundCapture()
@@ -34,7 +34,7 @@ func (s *listensState) Enter(event events.Event) (events.EventSources, error) {
 	}, nil
 }
 
-func (s *listensState) Leave(event events.Event) bool {
+func (s *listensState) Leave(ctx CharacterCtx, event events.Event) bool {
 	fmt.Printf("ListensState Leave\n")
 	return true
 }

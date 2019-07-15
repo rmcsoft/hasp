@@ -27,7 +27,7 @@ func NewIdleState(availableAnimations []string, animationDuration time.Duration,
 	}
 }
 
-func (s *idleState) Enter(event events.Event) (events.EventSources, error) {
+func (s *idleState) Enter(ctx CharacterCtx, event events.Event) (events.EventSources, error) {
 	fmt.Printf("IdleState Enter\n")
 	detectorEventSource, err := s.hotWordDetector.StartDetect()
 	if err != nil {
@@ -42,7 +42,7 @@ func (s *idleState) Enter(event events.Event) (events.EventSources, error) {
 	}, nil
 }
 
-func (s *idleState) Leave(event events.Event) bool {
+func (s *idleState) Leave(ctx CharacterCtx, event events.Event) bool {
 	fmt.Printf("IdleState Leave\n")
 	return true
 }

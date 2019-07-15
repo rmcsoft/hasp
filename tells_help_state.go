@@ -33,12 +33,12 @@ func NewTellsHelpState(availableAnimations []string, welcomeSpeech string) State
 	}
 }
 
-func (s *tellsHelpState) Enter(event hasp.Event) (hasp.EventSources, error) {
+func (s *tellsHelpState) Enter(ctx CharacterCtx, event hasp.Event) (hasp.EventSources, error) {
 	fmt.Printf("TellsHelpState Enter\n")
 	return nil, nil
 }
 
-func (s *tellsHelpState) Leave(event hasp.Event) bool {
+func (s *tellsHelpState) Leave(ctx CharacterCtx, event hasp.Event) bool {
 	fmt.Printf("TellsHelpState Leave\n")
 	return true
 }

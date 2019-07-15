@@ -17,11 +17,18 @@ type EventDesc = fsm.EventDesc
 // EventDescs is a shorthand for defining the transition map
 type EventDescs = []EventDesc
 
+type CharacterCtx = map[string]interface{}
+
+const (
+	CtxUserId = "UserId"
+)
+
 // Character is animated character
 type Character struct {
 	states      States
 	animator    *chanim.Animator
 	soundPlayer *sound.SoundPlayer
+	ctx         CharacterCtx
 	fsm         *fsm.FSM
 
 	eventSourceMultiplexer *events.EventSourceMultiplexer
@@ -48,6 +55,7 @@ func NewCharacter(
 		animator:               animator,
 		eventSourceMultiplexer: events.NewEventSourceMultiplexer(),
 		soundPlayer:            soundPlayer,
+		ctx:                    make(CharacterCtx),
 	}
 
 	// In any of the states, the StateChanged event should lead to updating
@@ -129,7 +137,7 @@ func (c *Character) enterStateCallbacks(e *fsm.Event) {
 		return
 	}
 
-	eventSources, err := nextState.Enter(events.Event{Name: e.Event, Args: e.Args})
+	eventSources, err := nextState.Enter(c.ctx, events.Event{Name: e.Event, Args: e.Args})
 	if err != nil {
 		e.Cancel(err)
 	}
@@ -146,7 +154,7 @@ func (c *Character) enterStateCallbacks(e *fsm.Event) {
 
 func (c *Character) leaveStateCallback(e *fsm.Event) {
 	if predState, ok := c.states[e.Src]; ok {
-		if !predState.Leave(events.Event{Name: e.Event, Args: e.Args}) {
+		if !predState.Leave(c.ctx, events.Event{Name: e.Event, Args: e.Args}) {
 			e.Cancel()
 			return
 		}

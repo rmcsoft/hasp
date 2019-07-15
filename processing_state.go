@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/lexruntimeservice"
 	"github.com/rmcsoft/hasp/events"
 	"github.com/rmcsoft/hasp/sound"
+	"github.com/twinj/uuid"
 )
 
 type processingState struct {
@@ -22,21 +23,27 @@ func NewProcessingState(availableAnimations []string, lrs *lexruntimeservice.Lex
 	}
 }
 
-func (s *processingState) Enter(event events.Event) (events.EventSources, error) {
+func (s *processingState) Enter(ctx CharacterCtx, event events.Event) (events.EventSources, error) {
 	fmt.Printf("ProcessingState Enter\n")
 
 	data, _ := sound.GetSoundCapturedEventData(&event)
-	soundCapturer, err := NewLexEventSource(s.lrs, data.AudioData)
+	userId, ok := ctx[CtxUserId]
+	if !ok {
+		u := uuid.NewV4()
+		ctx[CtxUserId] = u.String()
+		userId = ctx[CtxUserId]
+	}
+	lexResponseSource, err := NewLexEventSource(s.lrs, data.AudioData, userId.(string))
 	if err != nil {
 		panic(err)
 	}
 
 	return events.EventSources{
-		soundCapturer,
+		lexResponseSource,
 	}, nil
 }
 
-func (s *processingState) Leave(event events.Event) bool {
+func (s *processingState) Leave(ctx CharacterCtx, event events.Event) bool {
 	fmt.Printf("ProcessingState Leave\n")
 	return true
 }

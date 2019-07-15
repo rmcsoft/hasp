@@ -7,5 +7,6 @@ require (
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/looplab/fsm v0.1.0
 	github.com/rmcsoft/chanim v0.0.0-20190704151712-c355099c3ca5
+	github.com/twinj/uuid v1.0.0
 	github.com/zhuangsirui/binpacker v1.0.0
 )

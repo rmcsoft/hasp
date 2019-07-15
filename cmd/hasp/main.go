@@ -154,10 +154,8 @@ func makeCharacter(opts options) *hasp.Character {
 			[]string{"SMS"},
 			svc,
 		),
-		"goodbye": hasp.NewIdleState(
-			[]string{"lotus", "reading", "giggles", "reading"},
-			time.Duration(10)*time.Second,
-			hotWordDetector,
+		"goodbye": hasp.NewSingleAniState(
+			"goodbye",
 		),
 	}
 
@@ -189,11 +187,11 @@ func makeCharacter(opts options) *hasp.Character {
 		},
 		hasp.EventDesc{
 			Name: sound.SoundPlayedEventName,
-			Src:  []string{"goodbye"},
+			Src:  []string{"tells-bye"},
 			Dst:  "goodbye",
 		},
 		hasp.EventDesc{
-			Name: sound.SoundPlayedEventName,
+			Name: events.StateGoIdleName,
 			Src:  []string{"goodbye"},
 			Dst:  "idle",
 		},
