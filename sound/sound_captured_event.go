@@ -27,9 +27,9 @@ func NewSoundCapturedEvent(audioData *AudioData) *events.Event {
 
 // GetSoundCapturedEventData gets HotWordDetectedEvent data
 func GetSoundCapturedEventData(event *events.Event) (SoundCapturedEventData, error) {
-	if event.Name != SoundCapturedEventName {
+	if event.Name != SoundCapturedEventName && event.Name != HotWordWithDataDetectedEventName  {
 		return SoundCapturedEventData{},
-			fmt.Errorf("The event must be named %s", SoundCapturedEventName)
+			fmt.Errorf("The event must be named %s or %s", SoundCapturedEventName, HotWordWithDataDetectedEventName)
 	}
 
 	if len(event.Args) != 1 {

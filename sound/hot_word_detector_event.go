@@ -15,14 +15,19 @@ type HotWordDetectedEventData struct {
 const (
 	// HotWordDetectedEventName is the event name for keyword detection
 	HotWordDetectedEventName = "HotWordDetected"
+	HotWordWithDataDetectedEventName = "HotWordWithDataDetected"
 )
 
 // NewHotWordDetectedEvent creates HotWordDetectedEvent
 func NewHotWordDetectedEvent(audioData *AudioData) *events.Event {
+	typeName := HotWordWithDataDetectedEventName
+	if len(audioData.samples) == 0 {
+		typeName = HotWordDetectedEventName
+	}
 	return &events.Event{
-		Name: HotWordDetectedEventName,
+		Name: typeName,
 		Args: []interface{}{
-			HotWordDetectedEventData{audioData},
+			SoundCapturedEventData{audioData},
 		},
 	}
 }

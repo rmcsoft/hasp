@@ -166,6 +166,11 @@ func makeCharacter(opts options) *hasp.Character {
 			Dst:  "tells-help",
 		},
 		hasp.EventDesc{
+			Name: sound.HotWordWithDataDetectedEventName,
+			Src:  []string{"idle"},
+			Dst:  "processing",
+		},
+		hasp.EventDesc{
 			Name: sound.SoundPlayedEventName,
 			Src:  []string{"tells-help", "tells-aws", "tells-there"},
 			Dst:  "listens",
