@@ -18,7 +18,7 @@ import (
 type awsLexRuntime struct {
 	eventChan  chan *events.Event
 	lrs        *lexruntimeservice.LexRuntimeService
-	data       sound.SoundCapturedEventData
+	audioData  *sound.AudioData
 	sampleRate int
 	userId     string
 }
@@ -27,10 +27,10 @@ type awsLexRuntime struct {
 func NewLexEventSource(lrs *lexruntimeservice.LexRuntimeService,
 	audioData *sound.AudioData, userId string) (events.EventSource, error) {
 	h := &awsLexRuntime{
-		eventChan:  make(chan *events.Event),
-		lrs:        lrs,
+		eventChan: make(chan *events.Event),
+		lrs:       lrs,
 		audioData: audioData,
-		userId:     userId,
+		userId:    userId,
 	}
 
 	go h.run()
