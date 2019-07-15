@@ -1,4 +1,4 @@
-package hasp
+package sound
 
 // SampleType is numerical representation of sample
 type SampleType int
