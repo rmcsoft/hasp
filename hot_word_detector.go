@@ -28,8 +28,6 @@ typedef struct {
 
 static snd_pcm_t* openCaptureDev(const char* deviceName, unsigned int rate) {
    	int err;
-
-   	snd_pcm_hw_params_t* params = NULL;
    	snd_pcm_t* handle = NULL;
 
    	if ((err = snd_pcm_open(&handle, deviceName, SND_PCM_STREAM_CAPTURE, 0)) < 0) {
@@ -37,40 +35,6 @@ static snd_pcm_t* openCaptureDev(const char* deviceName, unsigned int rate) {
    		goto out;
    	}
 
-   	if ((err = snd_pcm_hw_params_malloc(&params)) < 0) {
-   		fprintf(stderr, "Cannot allocate hardware parameter structure (%s, %d)\n", snd_strerror(err), err);
-   		goto out;
-   	}
-
-   	if ((err = snd_pcm_hw_params_any(handle, params)) < 0) {
-   		fprintf(stderr, "Cannot initialize hardware parameter structure (%s, %d)\n", snd_strerror(err), err);
-   		goto out;
-   	}
-
-   	if ((err = snd_pcm_hw_params_set_access(handle, params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0) {
-   		fprintf(stderr, "Cannot set access type (%s, %d)\n", snd_strerror(err), err);
-   		goto out;
-   	}
-
-   	if ((err = snd_pcm_hw_params_set_format(handle, params,SND_PCM_FORMAT_S16_LE)) < 0) {
-   		fprintf(stderr, "Cannot set sample format (%s, %d)\n", snd_strerror(err), err);
-   		goto out;
-   	}
-
-   	if ((err = snd_pcm_hw_params_set_rate_near(handle, params, &rate, 0)) < 0) {
-   		fprintf(stderr, "Cannot set sample rate (%s, %d)\n", snd_strerror(err), err);
-   		goto out;
-   	}
-
-   	if ((err = snd_pcm_hw_params_set_channels(handle, params, 1)) < 0) {
-   		fprintf(stderr, "Cannot set channel count (%s, %d)\n", snd_strerror(err), err);
-   		goto out;
-   	}
-
-   	if ((err = snd_pcm_hw_params(handle, params)) < 0) {
-   		fprintf(stderr, "Cannot set parameters (%s, %d)\n", snd_strerror(err), err);
-   		goto out;
-   	}
 
 out:
    	if (err < 0) {
@@ -80,9 +44,6 @@ out:
    			handle = NULL;
    		}
    	}
-
-   	if (params)
-   		snd_pcm_hw_params_free(params);
 
    	return handle;
 }
@@ -152,11 +113,42 @@ static void resetPorcupine(Detector* d) {
 
 static bool startSession(Detector* d, int32_t* stopFlagPtr) {
    	bool retval = false;
+  	snd_pcm_hw_params_t* params = NULL;
+	int rate = d->sampleRate;
    	int err;
 
-   	err = snd_pcm_prepare(d->capDev);
-   	if (err < 0) {
-   		fprintf(stderr, "Cannot start soundcard (%s, %d)\n", snd_strerror(err), err);
+   	if ((err = snd_pcm_hw_params_malloc(&params)) < 0) {
+   		fprintf(stderr, "Cannot allocate hardware parameter structure (%s, %d)\n", snd_strerror(err), err);
+   		goto out;
+   	}
+
+   	if ((err = snd_pcm_hw_params_any(d->capDev, params)) < 0) {
+   		fprintf(stderr, "Cannot initialize hardware parameter structure (%s, %d)\n", snd_strerror(err), err);
+   		goto out;
+   	}
+
+   	if ((err = snd_pcm_hw_params_set_access(d->capDev, params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0) {
+   		fprintf(stderr, "Cannot set access type (%s, %d)\n", snd_strerror(err), err);
+   		goto out;
+   	}
+
+   	if ((err = snd_pcm_hw_params_set_format(d->capDev, params,SND_PCM_FORMAT_S16_LE)) < 0) {
+   		fprintf(stderr, "Cannot set sample format (%s, %d)\n", snd_strerror(err), err);
+   		goto out;
+   	}
+
+   	if ((err = snd_pcm_hw_params_set_rate_near(d->capDev, params, &rate, 0)) < 0) {
+   		fprintf(stderr, "Cannot set sample rate (%s, %d)\n", snd_strerror(err), err);
+   		goto out;
+   	}
+
+   	if ((err = snd_pcm_hw_params_set_channels(d->capDev, params, 1)) < 0) {
+   		fprintf(stderr, "Cannot set channel count (%s, %d)\n", snd_strerror(err), err);
+   		goto out;
+   	}
+
+   	if ((err = snd_pcm_hw_params(d->capDev, params)) < 0) {
+   		fprintf(stderr, "Cannot set parameters (%s, %d)\n", snd_strerror(err), err);
    		goto out;
    	}
 
@@ -165,6 +157,9 @@ static bool startSession(Detector* d, int32_t* stopFlagPtr) {
    	retval = true;
 
 out:
+   	if (params)
+   		snd_pcm_hw_params_free(params);
+
    	return retval;
 }
 
@@ -376,6 +371,7 @@ type HotWordDetector struct {
 	detector       *C.Detector
 	sessionChan    chan *hotWordDetectorSession
 	currentSession *hotWordDetectorSession
+	originState    string
 }
 
 // NewHotWordDetector creates HotWordDetector

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"reflect"
 	"unsafe"
 
@@ -81,7 +82,7 @@ func (h *awsLexRuntime) run() {
 		return
 	}
 
-	if *resp.IntentName == "StopIteraction" {
+	if resp.IntentName != nil && *resp.IntentName == "StopIteraction" {
 		h.gotStop(frames)
 	} else {
 		h.gotReply(frames)
@@ -103,6 +104,10 @@ func (h *awsLexRuntime) createReaderForSamples() io.Reader {
 	bh.Data = sh.Data
 	bh.Cap = sh.Cap * 2
 	bh.Len = sh.Len * 2
+
+	f, _ := os.Create("/tmp/data")
+	defer f.Close()
+	f.Write(buf)
 
 	return bytes.NewBuffer(buf)
 }
