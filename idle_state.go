@@ -9,26 +9,26 @@ import (
 )
 
 type idleState struct {
-	availableAnimations   []string
-	animationDuration     time.Duration
-	currentAnimation      int
-	hotWordDetectorParams HotWordDetectorParams
+	availableAnimations []string
+	animationDuration   time.Duration
+	currentAnimation    int
+	hotWordDetector     *HotWordDetector
 }
 
 // NewIdleState creates new IdleState
 func NewIdleState(availableAnimations []string, animationDuration time.Duration,
-	hotWordDetectorParams HotWordDetectorParams) State {
+	hotWordDetector *HotWordDetector) State {
 
 	return &idleState{
-		availableAnimations:   availableAnimations,
-		animationDuration:     animationDuration,
-		hotWordDetectorParams: hotWordDetectorParams,
+		availableAnimations: availableAnimations,
+		animationDuration:   animationDuration,
+		hotWordDetector:     hotWordDetector,
 	}
 }
 
 func (s *idleState) Enter(event events.Event) (events.EventSources, error) {
 	fmt.Printf("IdleState Enter\n")
-	detector, err := NewHotWordDetector(s.hotWordDetectorParams)
+	detectorEventSource, err := s.hotWordDetector.StartDetect()
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func (s *idleState) Enter(event events.Event) (events.EventSources, error) {
 		&changeAnimationEventSource{
 			period: s.animationDuration,
 		},
-		detector,
+		detectorEventSource,
 	}, nil
 }
 

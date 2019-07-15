@@ -9,26 +9,26 @@ import (
 type listensState struct {
 	availableAnimations []string
 	currentAnimation    int
-	captureDevice       string
+	detector            *HotWordDetector
 }
 
-func NewListensState(availableAnimations []string, captureDevice string) State {
+func NewListensState(availableAnimations []string, detector *HotWordDetector) State {
 	return &listensState{
 		availableAnimations: availableAnimations,
-		captureDevice:       captureDevice,
+		detector:            detector,
 	}
 }
 
 func (s *listensState) Enter(event events.Event) (events.EventSources, error) {
 	fmt.Printf("ListensState Enter\n")
 
-	soundCapturer, err := NewSoundCapturer(s.captureDevice)
+	soundCapturerEventSource, err := s.detector.StartSoundCapture()
 	if err != nil {
 		panic(err)
 	}
 
 	return events.EventSources{
-		soundCapturer,
+		soundCapturerEventSource,
 	}, nil
 }
 

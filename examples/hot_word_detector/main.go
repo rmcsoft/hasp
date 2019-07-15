@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/jessevdk/go-flags"
 	"github.com/rmcsoft/hasp"
@@ -37,15 +38,43 @@ func parseCmd() options {
 
 func main() {
 	opts := parseCmd()
-	hotWordDetector, err := hasp.NewHotWordDetector(opts.CaptureDevice, opts.ModelParamPath, opts.KeywordPath)
+
+	hotWordDetectorParams := hasp.HotWordDetectorParams{
+		CaptureDeviceName: opts.CaptureDevice,
+		ModelPath:         opts.ModelParamPath,
+		KeywordPath:       opts.KeywordPath,
+	}
+
+	hotWordDetector, err := hasp.NewHotWordDetector(hotWordDetectorParams)
 	if err != nil {
 		fail(err)
 	}
 
-	for event := range hotWordDetector.Events() {
-		d, _ := event.GetHotWordDetectedEventData()
-		fmt.Printf("samplesCount=%v, sampleRate=%v\n", len(d.Samples), d.SampleRate)
+	eventSource, err := hotWordDetector.StartDetect()
+	if err != nil {
+		fail(err)
 	}
 
-	fmt.Printf("HotWordDetector was closed\n")
+	var n int
+	ticker := time.NewTicker(time.Duration(30) * time.Second)
+	for {
+		select {
+		case event, ok := <-eventSource.Events():
+			if ok {
+				d, _ := event.GetHotWordDetectedEventData()
+				fmt.Printf("samplesCount=%v, sampleRate=%v\n", len(d.Samples), d.SampleRate)
+			} else {
+				eventSource, err = hotWordDetector.StartDetect()
+				if err != nil {
+					fail(err)
+				}
+
+				n++
+				fmt.Printf("n=%v, t=%v: HotWordDetector was closed\n", n, time.Now().Unix())
+			}
+
+		case <-ticker.C:
+			eventSource.Close()
+		}
+	}
 }

@@ -28,7 +28,7 @@ type options struct {
 	PlayDevice     string `short:"p" long:"play-dev"    default:"mono" description:"Sound play device name"`
 	ModelParamPath string `short:"m" long:"model-param" description:"Path to file containing model parameters" required:"true"`
 	KeywordPath    string `short:"k" long:"keyword"     description:"Path to keyword file" required:"true"`
-	AwsId          string `short:"a" long:"aws-id"     description:"AWS ID" required:"true"`
+	AwsID          string `short:"a" long:"aws-id"     description:"AWS ID" required:"true"`
 	AwsSecret      string `short:"w" long:"aws-secret" description:"AWS key" required:"true"`
 }
 
@@ -89,50 +89,65 @@ func makeSoundPlayer(opts options) *hasp.SoundPlayer {
 	return player
 }
 
-func makeCharacter(opts options) *hasp.Character {
+func makeHotWordDetector(opts options) *hasp.HotWordDetector {
+	params := hasp.HotWordDetectorParams{
+		CaptureDeviceName: opts.CaptureDevice,
+		KeywordPath:       opts.KeywordPath,
+		ModelPath:         opts.ModelParamPath,
+	}
 
-	sess, err := session.NewSession(&aws.Config{
+	hotWordDetector, err := hasp.NewHotWordDetector(params)
+	if err != nil {
+		fail(err)
+	}
+
+	return hotWordDetector
+}
+
+func makeAwsSession(opts options) *session.Session {
+	awsSess, err := session.NewSession(&aws.Config{
 		Region:      aws.String("us-east-1"),
-		Credentials: credentials.NewStaticCredentials(opts.AwsId, opts.AwsSecret, ""),
+		Credentials: credentials.NewStaticCredentials(opts.AwsID, opts.AwsSecret, ""),
 		LogLevel:    aws.LogLevel(aws.LogDebugWithRequestRetries),
 	})
 
 	if err != nil {
-		fmt.Println(sess)
-		return nil
-	} else {
-		fmt.Println("AWS session started...")
+		fail(err)
 	}
 
-	svc := lexruntimeservice.New(sess)
+	fmt.Println("AWS session started...")
+	return awsSess
+}
+
+func makeCharacter(opts options) *hasp.Character {
+
+	awsSess := makeAwsSession(opts)
+	svc := lexruntimeservice.New(awsSess)
+	hotWordDetector := makeHotWordDetector(opts)
 
 	states := hasp.States{
 		"idle": hasp.NewIdleState(
 			[]string{"lotus", "reading", "giggles", "reading"},
 			time.Duration(10)*time.Second,
-			hasp.HotWordDetectorParams{
-				CaptureDeviceName: opts.CaptureDevice,
-				KeywordPath:       opts.KeywordPath,
-				ModelPath:         opts.ModelParamPath,
-			},
+			hotWordDetector,
 		),
 		"tells-help": hasp.NewTellsHelpState(
-			[]string{"tells",},
+			[]string{"tells"},
 			"../wavs/hello-help.wav",
 		),
 		"tells-there": hasp.NewTellsHelpState(
-			[]string{"tells",},
+			[]string{"tells"},
 			"../wavs/still-there.wav",
 		),
 		"tells-aws": hasp.NewTellsState(
-			[]string{"tells",},
+			[]string{"tells"},
 		),
 		"listens": hasp.NewListensState(
-			[]string{"silent",},
-			opts.CaptureDevice,
+			[]string{"silent"},
+			hotWordDetector,
 		),
 		"processing": hasp.NewProcessingState(
-			[]string{"calls_typing",},
+			[]string{"calls_typing"},
 			svc,
 		),
 	}
@@ -165,8 +180,7 @@ func makeCharacter(opts options) *hasp.Character {
 		},
 	}
 
-	eventSources := events.EventSources{
-	}
+	eventSources := events.EventSources{}
 
 	animator := makeAnimator(opts)
 	soundPlayer := makeSoundPlayer(opts)
