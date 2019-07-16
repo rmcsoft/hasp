@@ -81,7 +81,7 @@ static void destroyDetector(Detector* d) {
 }
 
 static Detector* newDetector(
-   	const char* deviceName,
+   	const char *deviceName,
    	const char *modelPath, const char *keywordPath,
 	float sensitivity,
 	EStr* estr)
@@ -205,8 +205,9 @@ static int readSamples(Detector* d, int16_t* buf, int maxSampleCount, EStr* estr
 }
 
 #define DEBUG_VOICE
-#define NOISE_THRESHOLD 5000
-#define NOISE_FRAMES 30
+#define NOISE_THRESHOLD 6000
+#define NOISE_FRAMES 50
+#define MAX_SILENCE_FRAMES 140
 
 static short getMaxLoud(const int16_t* samples, int sampleCount) {
    	int16_t max = 0;
@@ -255,6 +256,11 @@ static int soundCapture(Detector* d, int16_t* outputBuffer, int maxSampleCount, 
    	const int bufSize = pv_porcupine_frame_length();
    	int16_t buf[bufSize];
 
+#define SECOND_BUFFER_SIZE (512*30)
+#define PRE_BUFFER_SIZE (3 * SECOND_BUFFER_SIZE)
+ 	int16_t preBuffer[PRE_BUFFER_SIZE] = {0};
+	int currentPreBufferPosition = 0;
+
    	int16_t silenseSens = -1;
    	int currentBufferFill = 0;
    	int startSilenceFrames = 0;
@@ -274,6 +280,11 @@ static int soundCapture(Detector* d, int16_t* outputBuffer, int maxSampleCount, 
 #endif
 
    				silenseSens = NOISE_FRAMES;
+
+   				memcpy(outputBuffer, preBuffer + currentPreBufferPosition, (PRE_BUFFER_SIZE - currentPreBufferPosition) * sizeof(int16_t));
+   				memcpy(outputBuffer + PRE_BUFFER_SIZE - currentPreBufferPosition, preBuffer, (currentPreBufferPosition) * sizeof(int16_t));
+   				currentBufferFill = PRE_BUFFER_SIZE;
+
    				memcpy(outputBuffer + currentBufferFill, buf, n*sizeof(int16_t));
    				currentBufferFill += n;
    			} else {
@@ -281,8 +292,15 @@ static int soundCapture(Detector* d, int16_t* outputBuffer, int maxSampleCount, 
    				printf("?"); fflush(stdout);
    				#endif
 
+   				memcpy(preBuffer + currentPreBufferPosition, buf, n*sizeof(int16_t));
+   				currentPreBufferPosition += n;
+   				if (currentPreBufferPosition >= PRE_BUFFER_SIZE)	{
+	   				printf("! %d (+ %d)\n", currentPreBufferPosition, n); fflush(stdout);
+					currentPreBufferPosition = 0;
+				}
+
    				startSilenceFrames++;
-   				if (startSilenceFrames >= NOISE_FRAMES) {
+   				if (startSilenceFrames >= MAX_SILENCE_FRAMES) {
    					return 0;
    				}
    			}
