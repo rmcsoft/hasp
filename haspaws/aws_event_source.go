@@ -4,9 +4,10 @@ import "C"
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"io/ioutil"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/lexruntimeservice"
@@ -60,19 +61,26 @@ func (h *awsLexRuntime) run() {
 		Accept:      aws.String("audio/pcm"),
 	})
 
-	fmt.Println("Send!..")
+	log.Infof("Send request to runtime.lex")
 	err := req.Send()
-	fmt.Println(resp, err)
+	if err != nil {
+		// TODO: Reaction to an error
+		log.Errorf("Failed to send request to runtime.lex: %v", err)
+		return
+	}
 
-	if err != nil || resp.AudioStream == nil {
-		fmt.Println(err)
-		// h.gotNoReply ?
+	log.Infof("Response runtime.lex: %v", resp)
+
+	if resp.AudioStream == nil {
+		// TODO: Reaction to an error, h.gotNoReply ?
+		log.Errorf("Response from runtime.lex does not contain AudioStream")
 		return
 	}
 
 	samples, err := ioutil.ReadAll(resp.AudioStream)
 	if err != nil || len(samples) == 0 {
-		fmt.Println(err)
+		// TODO: Reaction to an error
+		log.Errorf("Unable to read audio data from the runtime.lex response")
 		return
 	}
 	replaiedSpeech := sound.NewAudioData(h.replaiedAudioFormat, samples)
