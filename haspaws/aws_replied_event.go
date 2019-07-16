@@ -5,23 +5,23 @@ import (
 	"fmt"
 
 	"github.com/rmcsoft/hasp/events"
+	"github.com/rmcsoft/hasp/sound"
 )
 
 type AwsRepliedEventData struct {
-	Samples    []int16
-	SampleRate int
+	RepliedSpeech *sound.AudioData
 }
 
 const (
 	AwsRepliedEventName = "AwsReplied"
 )
 
-// NewAwsRepliedEvent creates HotWordDetectedEvent
-func NewAwsRepliedEvent(samples []int16, sampleRate int) *events.Event {
+// NewAwsRepliedEvent creates RepliedEvent
+func NewAwsRepliedEvent(repliedSpeech *sound.AudioData) *events.Event {
 	return &events.Event{
 		Name: AwsRepliedEventName,
 		Args: []interface{}{
-			AwsRepliedEventData{samples, sampleRate},
+			AwsRepliedEventData{repliedSpeech},
 		},
 	}
 }

@@ -3,6 +3,7 @@ package hasp
 import (
 	"fmt"
 
+	"github.com/rmcsoft/hasp/haspaws"
 	"github.com/rmcsoft/hasp/sound"
 
 	"github.com/rmcsoft/hasp/events"
@@ -22,8 +23,8 @@ func NewTellsByeState(availableAnimations []string) State {
 
 func (s *tellsByeState) Enter(ctx CharacterCtx, event events.Event) (events.EventSources, error) {
 	fmt.Printf("TellsByeState Enter\n")
-	data, _ := event.GetStopEventData()
-	s.byeSpeech = sound.NewMonoS16LEFromInt16(data.SampleRate, data.Samples)
+	data, _ := haspaws.GetStopEventData(&event)
+	s.byeSpeech = data.StopSpeach
 	return nil, nil
 }
 

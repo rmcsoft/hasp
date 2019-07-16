@@ -1,29 +1,31 @@
-package events
+package haspaws
 
 import (
 	"errors"
 	"fmt"
+
+	"github.com/rmcsoft/hasp/events"
+	"github.com/rmcsoft/hasp/sound"
 )
 
 type StopEventData struct {
-	Samples    []int16
-	SampleRate int
+	StopSpeach *sound.AudioData
 }
 
 const (
 	StopEventName = "Stop"
 )
 
-func NewStopEvent(samples []int16, sampleRate int) *Event {
-	return &Event{
+func NewStopEvent(stopSpeach *sound.AudioData) *events.Event {
+	return &events.Event{
 		Name: StopEventName,
 		Args: []interface{}{
-			StopEventData{samples, sampleRate},
+			StopEventData{stopSpeach},
 		},
 	}
 }
 
-func (event *Event) GetStopEventData() (StopEventData, error) {
+func GetStopEventData(event *events.Event) (StopEventData, error) {
 	if event.Name != StopEventName {
 		return StopEventData{},
 			fmt.Errorf("The event must be named %s", StopEventName)

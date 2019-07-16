@@ -25,7 +25,7 @@ func NewTellsState(availableAnimations []string) State {
 func (s *tellsState) Enter(ctx CharacterCtx, event events.Event) (events.EventSources, error) {
 	fmt.Printf("TellsState Enter\n")
 	data, _ := haspaws.GetAwsRepliedEventData(&event)
-	s.speech = sound.NewMonoS16LEFromInt16(data.SampleRate, data.Samples)
+	s.speech = data.RepliedSpeech
 	return nil, nil
 }
 

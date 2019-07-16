@@ -4,7 +4,6 @@ import "C"
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -16,21 +15,22 @@ import (
 )
 
 type awsLexRuntime struct {
-	eventChan  chan *events.Event
-	lrs        *lexruntimeservice.LexRuntimeService
-	audioData  *sound.AudioData
-	sampleRate int
-	userId     string
+	eventChan           chan *events.Event
+	lrs                 *lexruntimeservice.LexRuntimeService
+	audioData           *sound.AudioData
+	replaiedAudioFormat sound.AudioFormat
+	userId              string
 }
 
 // NewLexEventSource creates LexEventSource
 func NewLexEventSource(lrs *lexruntimeservice.LexRuntimeService,
 	audioData *sound.AudioData, userId string) (events.EventSource, error) {
 	h := &awsLexRuntime{
-		eventChan: make(chan *events.Event),
-		lrs:       lrs,
-		audioData: audioData,
-		userId:    userId,
+		eventChan:           make(chan *events.Event),
+		lrs:                 lrs,
+		audioData:           audioData,
+		userId:              userId,
+		replaiedAudioFormat: audioData.Format(),
 	}
 
 	go h.run()
@@ -70,33 +70,26 @@ func (h *awsLexRuntime) run() {
 		return
 	}
 
-	outbuf, err := ioutil.ReadAll(resp.AudioStream)
-	if err != nil || len(outbuf) == 0 {
+	samples, err := ioutil.ReadAll(resp.AudioStream)
+	if err != nil || len(samples) == 0 {
 		fmt.Println(err)
 		return
 	}
-
-	r := bytes.NewReader(outbuf)
-	frames := make([]int16, len(outbuf)/2)
-	err = binary.Read(r, binary.LittleEndian, &frames)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	replaiedSpeech := sound.NewAudioData(h.replaiedAudioFormat, samples)
 
 	if resp.IntentName != nil && *resp.IntentName == "StopIteraction" {
-		h.gotStop(frames)
+		h.gotStop(replaiedSpeech)
 	} else {
-		h.gotReply(frames)
+		h.gotReply(replaiedSpeech)
 	}
 }
 
-func (h *awsLexRuntime) gotReply(samples []int16) {
-	h.eventChan <- NewAwsRepliedEvent(samples, 16000)
+func (h *awsLexRuntime) gotReply(replaiedSpeech *sound.AudioData) {
+	h.eventChan <- NewAwsRepliedEvent(replaiedSpeech)
 }
 
-func (h *awsLexRuntime) gotStop(samples []int16) {
-	h.eventChan <- events.NewStopEvent(samples, 16000)
+func (h *awsLexRuntime) gotStop(replaiedSpeech *sound.AudioData) {
+	h.eventChan <- NewStopEvent(replaiedSpeech)
 }
 
 func (h *awsLexRuntime) makeInputStream() io.ReadSeeker {

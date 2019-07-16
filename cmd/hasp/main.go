@@ -194,7 +194,7 @@ func makeCharacter(opts options) *hasp.Character {
 			Dst:  "tells-aws",
 		},
 		hasp.EventDesc{
-			Name: events.StopEventName,
+			Name: haspaws.StopEventName,
 			Src:  []string{"processing"},
 			Dst:  "tells-bye",
 		},
