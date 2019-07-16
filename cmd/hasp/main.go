@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -31,6 +32,8 @@ type options struct {
 	KeywordPath    string `short:"k" long:"keyword"     description:"Path to keyword file" required:"true"`
 	AwsID          string `short:"a" long:"aws-id"     description:"AWS ID" required:"true"`
 	AwsSecret      string `short:"w" long:"aws-secret" description:"AWS key" required:"true"`
+
+	VisualizeFSM bool `long:"visualize-fsm" description:"Visualize character FSM in Graphviz format (file character.dot)"`
 }
 
 func fail(err error) {
@@ -222,6 +225,11 @@ func makeCharacter(opts options) *hasp.Character {
 	character, err := hasp.NewCharacter("idle", states, eventDescs, eventSources, animator, soundPlayer)
 	if err != nil {
 		fail(err)
+	}
+
+	if opts.VisualizeFSM {
+		graphviz := character.Visualize()
+		ioutil.WriteFile("character.dot", []byte(graphviz), 0644)
 	}
 
 	return character

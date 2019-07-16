@@ -91,6 +91,11 @@ func NewCharacter(
 	return c, nil
 }
 
+// Visualize outputs a visualization of a character FSM in Graphviz format
+func (c *Character) Visualize() string {
+	return fsm.Visualize(c.fsm)
+}
+
 // Run starting point for the character
 func (c *Character) Run() error {
 	if err := c.start(); err != nil {
