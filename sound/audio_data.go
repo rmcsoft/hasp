@@ -1,7 +1,10 @@
 package sound
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
+	"io/ioutil"
 )
 
 // SampleType is numerical representation of sample
@@ -52,6 +55,22 @@ func NewMonoS16LE(sampleRate int, samples []byte) *AudioData {
 		},
 		samples: samples,
 	}
+}
+
+func LoadMonoS16LEFromPCM(fileName string, sampleRate int) (*AudioData, error) {
+	samples, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewMonoS16LE(sampleRate, samples), nil
+}
+
+// NewMonoS16LEFromInt16 creates new AudioData from []int16
+func NewMonoS16LEFromInt16(sampleRate int, samples []int16) *AudioData {
+	buffer := bytes.NewBuffer(make([]byte, 0, 2*len(samples)))
+	binary.Write(buffer, binary.LittleEndian, samples)
+	return NewMonoS16LE(sampleRate, buffer.Bytes())
 }
 
 // Samples gets samples
