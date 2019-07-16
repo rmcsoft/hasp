@@ -1,8 +1,6 @@
 package hasp
 
 import (
-	"fmt"
-
 	"github.com/rmcsoft/hasp/events"
 	"github.com/rmcsoft/hasp/sound"
 )
@@ -22,12 +20,10 @@ func NewTellsHelpState(availableAnimations []string, welcomeSpeech *sound.AudioD
 }
 
 func (s *tellsHelpState) Enter(ctx CharacterCtx, event events.Event) (events.EventSources, error) {
-	fmt.Printf("TellsHelpState Enter\n")
 	return nil, nil
 }
 
 func (s *tellsHelpState) Leave(ctx CharacterCtx, event events.Event) bool {
-	fmt.Printf("TellsHelpState Leave\n")
 	return true
 }
 

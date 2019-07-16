@@ -1,7 +1,7 @@
 package events
 
 import (
-	"fmt"
+	log "github.com/sirupsen/logrus"
 )
 
 // Event is event Description
@@ -57,7 +57,7 @@ func (esm *EventSourceMultiplexer) NextEvent() *Event {
 			continue
 		}
 
-		fmt.Printf("NextEvent: Source=%s, Name=%s\n",
+		log.Infof("NextEvent: Source=%s, Name=%s\n",
 			es.Name(), e.event.Name)
 		return e.event
 	}
@@ -93,9 +93,9 @@ type event struct {
 }
 
 func (esm *EventSourceMultiplexer) runEventSource(id IDEventSource, eventSource EventSource) {
-	fmt.Printf("EventSource '%s' running\n", eventSource.Name())
+	log.Infof("EventSource '%s' running\n", eventSource.Name())
 	for e := range eventSource.Events() {
 		esm.multiplexer <- event{id, e}
 	}
-	fmt.Printf("EventSource '%s' stopped\n", eventSource.Name())
+	log.Infof("EventSource '%s' stopped\n", eventSource.Name())
 }

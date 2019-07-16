@@ -1,8 +1,6 @@
 package hasp
 
 import (
-	"fmt"
-
 	"github.com/rmcsoft/hasp/haspaws"
 	"github.com/rmcsoft/hasp/sound"
 
@@ -23,14 +21,12 @@ func NewTellsState(availableAnimations []string) State {
 }
 
 func (s *tellsState) Enter(ctx CharacterCtx, event events.Event) (events.EventSources, error) {
-	fmt.Printf("TellsState Enter\n")
 	data, _ := haspaws.GetAwsRepliedEventData(&event)
 	s.speech = data.RepliedSpeech
 	return nil, nil
 }
 
 func (s *tellsState) Leave(ctx CharacterCtx, event events.Event) bool {
-	fmt.Printf("TellsState Leave\n")
 	return true
 }
 

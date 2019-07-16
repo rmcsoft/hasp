@@ -1,8 +1,6 @@
 package hasp
 
 import (
-	"fmt"
-
 	"github.com/rmcsoft/hasp/sound"
 
 	"github.com/rmcsoft/hasp/events"
@@ -19,15 +17,12 @@ func NewSingleAniState(animation string) State {
 }
 
 func (s *singleAniState) Enter(ctx CharacterCtx, event events.Event) (events.EventSources, error) {
-	fmt.Printf("SingleAniState Enter\n")
-
 	return events.EventSources{events.NewSingleEventSource(events.StateGoIdleName, func() *events.Event {
 		return &events.Event{Name: events.StateGoIdleName}
 	})}, nil
 }
 
 func (s *singleAniState) Leave(ctx CharacterCtx, event events.Event) bool {
-	fmt.Printf("SingleAniState Leave\n")
 	return true
 }
 

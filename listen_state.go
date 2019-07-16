@@ -1,8 +1,6 @@
 package hasp
 
 import (
-	"fmt"
-
 	"github.com/rmcsoft/hasp/events"
 	"github.com/rmcsoft/hasp/sound"
 )
@@ -22,7 +20,6 @@ func NewListensState(availableAnimations []string, detector *sound.HotWordDetect
 }
 
 func (s *listensState) Enter(ctx CharacterCtx, event events.Event) (events.EventSources, error) {
-	fmt.Printf("ListensState Enter\n")
 
 	soundCapturerEventSource, err := s.detector.StartSoundCapture()
 	if err != nil {
@@ -35,7 +32,6 @@ func (s *listensState) Enter(ctx CharacterCtx, event events.Event) (events.Event
 }
 
 func (s *listensState) Leave(ctx CharacterCtx, event events.Event) bool {
-	fmt.Printf("ListensState Leave\n")
 	return true
 }
 

@@ -1,7 +1,6 @@
 package hasp
 
 import (
-	"fmt"
 	"sync/atomic"
 	"time"
 
@@ -28,7 +27,6 @@ func NewIdleState(availableAnimations []string, animationDuration time.Duration,
 }
 
 func (s *idleState) Enter(ctx CharacterCtx, event events.Event) (events.EventSources, error) {
-	fmt.Printf("IdleState Enter\n")
 	detectorEventSource, err := s.hotWordDetector.StartDetect()
 	if err != nil {
 		return nil, err
@@ -43,7 +41,6 @@ func (s *idleState) Enter(ctx CharacterCtx, event events.Event) (events.EventSou
 }
 
 func (s *idleState) Leave(ctx CharacterCtx, event events.Event) bool {
-	fmt.Printf("IdleState Leave\n")
 	return true
 }
 

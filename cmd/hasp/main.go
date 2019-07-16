@@ -3,10 +3,11 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/rmcsoft/chanim"
 	"github.com/rmcsoft/hasp"
@@ -116,7 +117,7 @@ func makeAwsSession(opts options) *session.Session {
 		log.Fatal(err)
 	}
 
-	log.Println("AWS session started...")
+	log.Info("AWS session started...")
 	return awsSess
 }
 
@@ -233,6 +234,11 @@ func makeCharacter(opts options) *hasp.Character {
 }
 
 func main() {
+	log.SetFormatter(&log.TextFormatter{
+		FullTimestamp:   true,
+		TimestampFormat: "2006-01-02T15:04:05.999",
+	})
+
 	opts := parseCmd()
 
 	character := makeCharacter(opts)

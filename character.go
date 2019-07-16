@@ -2,7 +2,8 @@ package hasp
 
 import (
 	"fmt"
-	"os"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/rmcsoft/chanim"
 	"github.com/rmcsoft/hasp/events"
@@ -96,6 +97,11 @@ func (c *Character) Visualize() string {
 	return fsm.Visualize(c.fsm)
 }
 
+func isNoTransitionError(err error) bool {
+	_, ok := err.(fsm.NoTransitionError)
+	return ok
+}
+
 // Run starting point for the character
 func (c *Character) Run() error {
 	if err := c.start(); err != nil {
@@ -105,8 +111,8 @@ func (c *Character) Run() error {
 	for event := c.eventSourceMultiplexer.NextEvent(); event != nil; {
 
 		err := c.fsm.Event(event.Name, event.Args...)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
+		if err != nil && !isNoTransitionError(err) {
+			log.Errorf("%v\n", err)
 		}
 
 		event = c.eventSourceMultiplexer.NextEvent()
@@ -136,6 +142,8 @@ func (c *Character) start() error {
 }
 
 func (c *Character) enterStateCallbacks(e *fsm.Event) {
+	log.Infof("Entry to '%s' state", e.Dst)
+
 	nextState, ok := c.states[e.Dst]
 	if !ok {
 		e.Cancel(fmt.Errorf("Can't find state with name '%s'", e.Dst))
@@ -158,6 +166,8 @@ func (c *Character) enterStateCallbacks(e *fsm.Event) {
 }
 
 func (c *Character) leaveStateCallback(e *fsm.Event) {
+	log.Infof("Leave from '%s' state", e.Src)
+
 	if predState, ok := c.states[e.Src]; ok {
 		if !predState.Leave(c.ctx, events.Event{Name: e.Event, Args: e.Args}) {
 			e.Cancel()
