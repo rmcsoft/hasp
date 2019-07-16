@@ -20,8 +20,12 @@ func NewTellsByeState(availableAnimations []string) State {
 }
 
 func (s *tellsByeState) Enter(ctx CharacterCtx, event events.Event) (events.EventSources, error) {
-	data, _ := haspaws.GetStopEventData(&event)
-	s.byeSpeech = data.StopSpeach
+	if len(event.Args) > 0 {
+		data, _ := haspaws.GetStopEventData(&event)
+		s.byeSpeech = data.StopSpeach
+	} else {
+		s.byeSpeech = nil
+	}
 	return nil, nil
 }
 

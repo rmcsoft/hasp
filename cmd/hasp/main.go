@@ -110,7 +110,7 @@ func makeAwsSession(opts options) *session.Session {
 	awsSess, err := session.NewSession(&aws.Config{
 		Region:      aws.String("us-east-1"),
 		Credentials: credentials.NewStaticCredentials(opts.AwsID, opts.AwsSecret, ""),
-		LogLevel:    aws.LogLevel(aws.LogDebugWithRequestRetries),
+		LogLevel:    aws.LogLevel(aws.LogDebugWithRequestErrors),
 	})
 
 	if err != nil {
