@@ -1,44 +1,32 @@
 package hasp
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
-	"io/ioutil"
-	"log"
 
-	hasp "github.com/rmcsoft/hasp/events"
+	"github.com/rmcsoft/hasp/events"
+	"github.com/rmcsoft/hasp/sound"
 )
 
 type tellsHelpState struct {
 	availableAnimations []string
 	currentAnimation    int
-	welcomeSpeech       []int16
+	welcomeSpeech       *sound.AudioData
 }
 
 // NewTellsHelpState creates new IdleState
-func NewTellsHelpState(availableAnimations []string, welcomeSpeech string) State {
-	content, err := ioutil.ReadFile(welcomeSpeech)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	r := bytes.NewReader(content)
-	frames := make([]int16, len(content)/2)
-	binary.Read(r, binary.LittleEndian, &frames)
-
+func NewTellsHelpState(availableAnimations []string, welcomeSpeech *sound.AudioData) State {
 	return &tellsHelpState{
 		availableAnimations: availableAnimations,
-		welcomeSpeech:       frames,
+		welcomeSpeech:       welcomeSpeech,
 	}
 }
 
-func (s *tellsHelpState) Enter(ctx CharacterCtx, event hasp.Event) (hasp.EventSources, error) {
+func (s *tellsHelpState) Enter(ctx CharacterCtx, event events.Event) (events.EventSources, error) {
 	fmt.Printf("TellsHelpState Enter\n")
 	return nil, nil
 }
 
-func (s *tellsHelpState) Leave(ctx CharacterCtx, event hasp.Event) bool {
+func (s *tellsHelpState) Leave(ctx CharacterCtx, event events.Event) bool {
 	fmt.Printf("TellsHelpState Leave\n")
 	return true
 }
@@ -48,6 +36,6 @@ func (s *tellsHelpState) GetAnimation() string {
 	return animation
 }
 
-func (s *tellsHelpState) GetSound() []int16 {
+func (s *tellsHelpState) GetSound() *sound.AudioData {
 	return s.welcomeSpeech
 }

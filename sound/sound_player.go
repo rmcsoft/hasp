@@ -92,8 +92,10 @@ static int playback(snd_pcm_t* handle, const int16_t* buf, int bufSize) {
 import "C"
 
 import (
+	"errors"
 	"fmt"
 	"sync"
+	"unsafe"
 
 	"github.com/rmcsoft/hasp/events"
 )
@@ -103,8 +105,7 @@ const SoundPlayedEventName = "SoundPlayedEvent"
 
 // SoundPlayer sound player
 type SoundPlayer struct {
-	devName    string
-	sampleRate int
+	devName string
 
 	devClosedCond *sync.Cond
 	devMutex      *sync.Mutex
@@ -112,37 +113,42 @@ type SoundPlayer struct {
 }
 
 // NewSoundPlayer creates new SoundPlayer
-func NewSoundPlayer(devName string, sampleRate int) (*SoundPlayer, error) {
+func NewSoundPlayer(devName string) (*SoundPlayer, error) {
 	sp := &SoundPlayer{
-		devName:    devName,
-		sampleRate: sampleRate,
-		devMutex:   &sync.Mutex{},
+		devName:  devName,
+		devMutex: &sync.Mutex{},
 	}
 	sp.devClosedCond = sync.NewCond(sp.devMutex)
 	return sp, nil
 }
 
 // Play starts playing back buffer
-func (p *SoundPlayer) Play(samples []int16) (events.EventSource, error) {
+func (p *SoundPlayer) Play(audioData *AudioData) (events.EventSource, error) {
 
 	p.devMutex.Lock()
 	defer p.devMutex.Unlock()
 	p.stop(false)
 
-	p.dev = C.openDevice(C.CString(p.devName), C.uint(p.sampleRate))
-	if p.dev == nil {
+	if audioData.SampleType() != S16LE || audioData.ChannelCount() != 1 {
+		return nil, errors.New("Unsupported audio format")
+	}
 
+	p.dev = C.openDevice(C.CString(p.devName), C.uint(audioData.SampleRate()))
+	if p.dev == nil {
+		return nil, errors.New("Could't open audio device for playback")
 	}
 
 	asyncPlay := func() *events.Event {
 		fmt.Println("StartPlay")
-		sampleCount := len(samples)
+		sampleCount := audioData.SampleCount()
 		if sampleCount == 0 {
 			fmt.Println("NothingToPlay")
 			p.closeDev()
 			return &events.Event{Name: SoundPlayedEventName}
 		}
-		C.playback(p.dev, (*C.int16_t)(&samples[0]), C.int(sampleCount))
+		samples := audioData.Samples()
+		cptr := (*C.int16_t)(unsafe.Pointer(&samples[0]))
+		C.playback(p.dev, cptr, C.int(sampleCount))
 		p.closeDev()
 		fmt.Println("StopPlay")
 		return &events.Event{Name: SoundPlayedEventName}

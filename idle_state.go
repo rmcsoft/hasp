@@ -53,7 +53,7 @@ func (s *idleState) GetAnimation() string {
 	return animation
 }
 
-func (s *idleState) GetSound() []int16 {
+func (s *idleState) GetSound() *sound.AudioData {
 	return nil
 }
 

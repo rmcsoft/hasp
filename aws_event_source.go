@@ -49,6 +49,8 @@ func (h *awsLexRuntime) Close() {
 }
 
 func (h *awsLexRuntime) run() {
+	defer close(h.eventChan)
+
 	req, resp := h.lrs.PostContentRequest(&lexruntimeservice.PostContentInput{
 		BotAlias:    aws.String("Prod"),
 		BotName:     aws.String("HASPBot"),

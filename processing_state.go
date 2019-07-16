@@ -53,6 +53,6 @@ func (s *processingState) GetAnimation() string {
 	return animation
 }
 
-func (*processingState) GetSound() []int16 {
+func (*processingState) GetSound() *sound.AudioData {
 	return nil
 }

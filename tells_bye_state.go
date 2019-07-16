@@ -3,13 +3,15 @@ package hasp
 import (
 	"fmt"
 
+	"github.com/rmcsoft/hasp/sound"
+
 	"github.com/rmcsoft/hasp/events"
 )
 
 type tellsByeState struct {
 	availableAnimations []string
 	currentAnimation    int
-	data                []int16
+	byeSpeech           *sound.AudioData
 }
 
 func NewTellsByeState(availableAnimations []string) State {
@@ -21,7 +23,7 @@ func NewTellsByeState(availableAnimations []string) State {
 func (s *tellsByeState) Enter(ctx CharacterCtx, event events.Event) (events.EventSources, error) {
 	fmt.Printf("TellsByeState Enter\n")
 	data, _ := event.GetStopEventData()
-	s.data = data.Samples
+	s.byeSpeech = sound.NewMonoS16LEFromInt16(data.SampleRate, data.Samples)
 	return nil, nil
 }
 
@@ -36,6 +38,6 @@ func (s *tellsByeState) GetAnimation() string {
 	return animation
 }
 
-func (s *tellsByeState) GetSound() []int16 {
-	return s.data
+func (s *tellsByeState) GetSound() *sound.AudioData {
+	return s.byeSpeech
 }

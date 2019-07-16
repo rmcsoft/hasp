@@ -44,6 +44,6 @@ func (s *listensState) GetAnimation() string {
 	return animation
 }
 
-func (*listensState) GetSound() []int16 {
+func (*listensState) GetSound() *sound.AudioData {
 	return nil
 }

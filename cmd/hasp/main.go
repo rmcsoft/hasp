@@ -83,7 +83,7 @@ func makeAnimator(opts options) *chanim.Animator {
 }
 
 func makeSoundPlayer(opts options) *sound.SoundPlayer {
-	player, err := sound.NewSoundPlayer(opts.PlayDevice, 16000)
+	player, err := sound.NewSoundPlayer(opts.PlayDevice)
 	if err != nil {
 		fail(err)
 	}
@@ -120,6 +120,14 @@ func makeAwsSession(opts options) *session.Session {
 	return awsSess
 }
 
+func loadAudioData(fileName string) *sound.AudioData {
+	audioData, err := sound.LoadMonoS16LEFromPCM(fileName, 16000)
+	if err != nil {
+		fail(err)
+	}
+	return audioData
+}
+
 func makeCharacter(opts options) *hasp.Character {
 
 	awsSess := makeAwsSession(opts)
@@ -134,11 +142,11 @@ func makeCharacter(opts options) *hasp.Character {
 		),
 		"tells-help": hasp.NewTellsHelpState(
 			[]string{"tells"},
-			"../wavs/hello-help.wav",
+			loadAudioData("../wavs/hello-help.wav"),
 		),
 		"tells-there": hasp.NewTellsHelpState(
 			[]string{"tells"},
-			"../wavs/still-there.wav",
+			loadAudioData("../wavs/still-there.wav"),
 		),
 		"tells-aws": hasp.NewTellsState(
 			[]string{"tells"},

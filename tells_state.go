@@ -3,13 +3,15 @@ package hasp
 import (
 	"fmt"
 
+	"github.com/rmcsoft/hasp/sound"
+
 	"github.com/rmcsoft/hasp/events"
 )
 
 type tellsState struct {
 	availableAnimations []string
 	currentAnimation    int
-	data                []int16
+	speech              *sound.AudioData
 }
 
 // NewTellsState creates new IdleState
@@ -22,7 +24,7 @@ func NewTellsState(availableAnimations []string) State {
 func (s *tellsState) Enter(ctx CharacterCtx, event events.Event) (events.EventSources, error) {
 	fmt.Printf("TellsState Enter\n")
 	data, _ := event.GetAwsRepliedEventData()
-	s.data = data.Samples
+	s.speech = sound.NewMonoS16LEFromInt16(data.SampleRate, data.Samples)
 	return nil, nil
 }
 
@@ -36,6 +38,6 @@ func (s *tellsState) GetAnimation() string {
 	return animation
 }
 
-func (s *tellsState) GetSound() []int16 {
-	return s.data
+func (s *tellsState) GetSound() *sound.AudioData {
+	return s.speech
 }
