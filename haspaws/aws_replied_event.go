@@ -1,8 +1,10 @@
-package events
+package haspaws
 
 import (
 	"errors"
 	"fmt"
+
+	"github.com/rmcsoft/hasp/events"
 )
 
 type AwsRepliedEventData struct {
@@ -14,25 +16,25 @@ const (
 	AwsRepliedEventName = "AwsReplied"
 )
 
-// NewHotWordDetectedEvent creates HotWordDetectedEvent
-func NewAwsRepliedEvent(samples []int16, sampleRate int) *Event {
-	return &Event{
+// NewAwsRepliedEvent creates HotWordDetectedEvent
+func NewAwsRepliedEvent(samples []int16, sampleRate int) *events.Event {
+	return &events.Event{
 		Name: AwsRepliedEventName,
 		Args: []interface{}{
-			AwsRepliedEventData {samples, sampleRate},
+			AwsRepliedEventData{samples, sampleRate},
 		},
 	}
 }
 
 // GetAwsRepliedEventData gets AwsRepliedEvent data
-func (event *Event) GetAwsRepliedEventData() (AwsRepliedEventData, error) {
+func GetAwsRepliedEventData(event *events.Event) (AwsRepliedEventData, error) {
 	if event.Name != AwsRepliedEventName {
-		return AwsRepliedEventData {},
+		return AwsRepliedEventData{},
 			fmt.Errorf("The event must be named %s", AwsRepliedEventName)
 	}
 
 	if len(event.Args) != 1 {
-		return AwsRepliedEventData {},
+		return AwsRepliedEventData{},
 			errors.New("Event does not data")
 	}
 

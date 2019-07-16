@@ -5,6 +5,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/lexruntimeservice"
 	"github.com/rmcsoft/hasp/events"
+	"github.com/rmcsoft/hasp/haspaws"
 	"github.com/rmcsoft/hasp/sound"
 	"github.com/twinj/uuid"
 )
@@ -33,7 +34,7 @@ func (s *processingState) Enter(ctx CharacterCtx, event events.Event) (events.Ev
 		ctx[CtxUserId] = u.String()
 		userId = ctx[CtxUserId]
 	}
-	lexResponseSource, err := NewLexEventSource(s.lrs, data.AudioData, userId.(string))
+	lexResponseSource, err := haspaws.NewLexEventSource(s.lrs, data.AudioData, userId.(string))
 	if err != nil {
 		panic(err)
 	}

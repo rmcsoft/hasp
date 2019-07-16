@@ -25,12 +25,12 @@ func NewStopEvent(samples []int16, sampleRate int) *Event {
 
 func (event *Event) GetStopEventData() (StopEventData, error) {
 	if event.Name != StopEventName {
-		return StopEventData {},
-			fmt.Errorf("The event must be named %s", AwsRepliedEventName)
+		return StopEventData{},
+			fmt.Errorf("The event must be named %s", StopEventName)
 	}
 
 	if len(event.Args) != 1 {
-		return StopEventData {},
+		return StopEventData{},
 			errors.New("Event does not data")
 	}
 

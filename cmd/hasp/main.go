@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/rmcsoft/chanim"
 	"github.com/rmcsoft/hasp"
 	"github.com/rmcsoft/hasp/events"
+	"github.com/rmcsoft/hasp/haspaws"
 	"github.com/rmcsoft/hasp/sound"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -36,11 +38,6 @@ type options struct {
 	VisualizeFSM bool `long:"visualize-fsm" description:"Visualize character FSM in Graphviz format (file character.dot)"`
 }
 
-func fail(err error) {
-	fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-	os.Exit(1)
-}
-
 func parseCmd() options {
 	var opts options
 	var cmdParser = flags.NewParser(&opts, flags.HelpFlag|flags.PassDoubleDash)
@@ -51,11 +48,11 @@ func parseCmd() options {
 			fmt.Println(flagsErr)
 			os.Exit(0)
 		}
-		fail(err)
+		log.Fatal(err)
 	}
 
 	if opts.PackedImageDir, err = filepath.Abs(opts.PackedImageDir); err != nil {
-		fail(err)
+		log.Fatal(err)
 	}
 
 	return opts
@@ -70,7 +67,7 @@ func makePaintEngine(opts options) chanim.PaintEngine {
 		paintEngine, err = chanim.NewKMSDRMPaintEngine(0, pixFormat)
 	}
 	if err != nil {
-		fail(err)
+		log.Fatal(err)
 	}
 
 	return paintEngine
@@ -80,7 +77,7 @@ func makeAnimator(opts options) *chanim.Animator {
 	paintEngine := makePaintEngine(opts)
 	animator, err := hasp.CreateAnimator(paintEngine, opts.PackedImageDir)
 	if err != nil {
-		fail(err)
+		log.Fatal(err)
 	}
 	return animator
 }
@@ -88,7 +85,7 @@ func makeAnimator(opts options) *chanim.Animator {
 func makeSoundPlayer(opts options) *sound.SoundPlayer {
 	player, err := sound.NewSoundPlayer(opts.PlayDevice)
 	if err != nil {
-		fail(err)
+		log.Fatal(err)
 	}
 	return player
 }
@@ -102,7 +99,7 @@ func makeHotWordDetector(opts options) *sound.HotWordDetector {
 
 	hotWordDetector, err := sound.NewHotWordDetector(params)
 	if err != nil {
-		fail(err)
+		log.Fatal(err)
 	}
 
 	return hotWordDetector
@@ -116,17 +113,17 @@ func makeAwsSession(opts options) *session.Session {
 	})
 
 	if err != nil {
-		fail(err)
+		log.Fatal(err)
 	}
 
-	fmt.Println("AWS session started...")
+	log.Println("AWS session started...")
 	return awsSess
 }
 
 func loadAudioData(fileName string) *sound.AudioData {
 	audioData, err := sound.LoadMonoS16LEFromPCM(fileName, 16000)
 	if err != nil {
-		fail(err)
+		log.Fatal(err)
 	}
 	return audioData
 }
@@ -192,7 +189,7 @@ func makeCharacter(opts options) *hasp.Character {
 			Dst:  "processing",
 		},
 		hasp.EventDesc{
-			Name: events.AwsRepliedEventName,
+			Name: haspaws.AwsRepliedEventName,
 			Src:  []string{"processing"},
 			Dst:  "tells-aws",
 		},
@@ -224,7 +221,7 @@ func makeCharacter(opts options) *hasp.Character {
 	soundPlayer := makeSoundPlayer(opts)
 	character, err := hasp.NewCharacter("idle", states, eventDescs, eventSources, animator, soundPlayer)
 	if err != nil {
-		fail(err)
+		log.Fatal(err)
 	}
 
 	if opts.VisualizeFSM {
@@ -241,6 +238,6 @@ func main() {
 	character := makeCharacter(opts)
 	err := character.Run()
 	if err != nil {
-		fail(err)
+		log.Fatal(err)
 	}
 }

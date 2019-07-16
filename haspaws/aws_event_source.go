@@ -1,4 +1,4 @@
-package hasp
+package haspaws
 
 import "C"
 
@@ -92,7 +92,7 @@ func (h *awsLexRuntime) run() {
 }
 
 func (h *awsLexRuntime) gotReply(samples []int16) {
-	h.eventChan <- events.NewAwsRepliedEvent(samples, 16000)
+	h.eventChan <- NewAwsRepliedEvent(samples, 16000)
 }
 
 func (h *awsLexRuntime) gotStop(samples []int16) {
