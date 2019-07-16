@@ -481,7 +481,7 @@ func (d *HotWordDetector) makeSampleBuf() (buf []byte, cptr *C.int16_t, maxSampl
 
 func (d *HotWordDetector) makeAudioData(buf []byte, sampleCount C.int) *AudioData {
 	sizeInBytes := int(sampleCount) * S16LE.Size()
-	return NewMonoS16LE(buf[0:sizeInBytes], d.SampleRate())
+	return NewMonoS16LE(d.SampleRate(), buf[0:sizeInBytes])
 }
 
 func (d *HotWordDetector) handleError(session *hotWordDetectorSession, op string, errcode int) {

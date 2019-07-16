@@ -25,8 +25,25 @@ type AudioData struct {
 	samples []byte
 }
 
-// NewMonoS16LE creates new
-func NewMonoS16LE(samples []byte, sampleRate int) *AudioData {
+// Mime gets MIME for AudioFormat
+func (af *AudioFormat) Mime() string {
+	return fmt.Sprintf("audio/%v; rate=%v; channels=%v",
+		af.SampleType.Mime(),
+		af.SampleRate,
+		af.ChannelCount,
+	)
+}
+
+// NewAudioData creates new AudioData
+func NewAudioData(format AudioFormat, samples []byte) *AudioData {
+	return &AudioData{
+		format:  format,
+		samples: samples,
+	}
+}
+
+// NewMonoS16LE creates new AudioData
+func NewMonoS16LE(sampleRate int, samples []byte) *AudioData {
 	return &AudioData{
 		format: AudioFormat{
 			ChannelCount: 1,
@@ -74,11 +91,7 @@ func (a *AudioData) SampleCount() int {
 
 // Mime gets MIME for AudioData
 func (a *AudioData) Mime() string {
-	return fmt.Sprintf("audio/%v; rate=%v; channels=%v",
-		a.SampleType().Mime(),
-		a.SampleRate(),
-		a.ChannelCount(),
-	)
+	return a.format.Mime()
 }
 
 // Size returns sample size
