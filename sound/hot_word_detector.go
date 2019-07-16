@@ -26,12 +26,17 @@ typedef struct {
 	int sampleRate;
 } Detector;
 
-static snd_pcm_t* openCaptureDev(const char* deviceName, unsigned int rate) {
+#define ESTRN 256
+typedef char EStr[ESTRN];
+
+#define eprintf(fromat...) snprintf(*estr, ESTRN, fromat)
+
+static snd_pcm_t* openCaptureDev(const char* deviceName, unsigned int rate, EStr* estr) {
    	int err;
    	snd_pcm_t* handle = NULL;
 
    	if ((err = snd_pcm_open(&handle, deviceName, SND_PCM_STREAM_CAPTURE, 0)) < 0) {
-   		fprintf(stderr, "Cannot open capture audio device %s (%s, %d)\n", deviceName, snd_strerror(err), err);
+   		eprintf("Cannot open capture audio device %s (%s, %d)", deviceName, snd_strerror(err), err);
    		goto out;
    	}
 
@@ -48,11 +53,11 @@ out:
    	return handle;
 }
 
-static pv_porcupine_object_t* createPorcupine(const char *modelPath, const char *keywordPath, float sensitivity) {
+static pv_porcupine_object_t* createPorcupine(const char *modelPath, const char *keywordPath, float sensitivity, EStr* estr) {
    	pv_porcupine_object_t* porcupine = NULL;
    	pv_status_t status = pv_porcupine_init(modelPath, keywordPath, sensitivity, &porcupine);
    	if (status != PV_STATUS_SUCCESS) {
-   		fprintf(stderr, "Failed to initialize Porcupine\n");
+   		eprintf("Failed to initialize Porcupine");
    		return NULL;
    	}
 
@@ -78,20 +83,23 @@ static void destroyDetector(Detector* d) {
 static Detector* newDetector(
    	const char* deviceName,
    	const char *modelPath, const char *keywordPath,
-   	float sensitivity)
+	float sensitivity,
+	EStr* estr)
 {
    	Detector* d = calloc(1, sizeof(Detector));
-   	if (d == NULL)
-   		return NULL;
+   	if (d == NULL) {
+		eprintf("Unable to alloc memmory for Detector");
+		return NULL;
+	}
 
    	d->sampleRate = pv_sample_rate();
-   	d->capDev = openCaptureDev(deviceName, d->sampleRate);
+   	d->capDev = openCaptureDev(deviceName, d->sampleRate, estr);
    	if (d->capDev == NULL)
    		goto error;
 
    	if (modelPath != NULL && keywordPath != NULL)
    	{
-   		d->porcupine = createPorcupine(modelPath, keywordPath, sensitivity);
+   		d->porcupine = createPorcupine(modelPath, keywordPath, sensitivity, estr);
    		if (d->porcupine == NULL)
    			goto error;
    	}
@@ -111,44 +119,44 @@ static void resetPorcupine(Detector* d) {
 	pv_porcupine_process(d->porcupine, buf, &detected);
 }
 
-static bool startSession(Detector* d, int32_t* stopFlagPtr) {
+static bool startSession(Detector* d, int32_t* stopFlagPtr, EStr* estr) {
    	bool retval = false;
   	snd_pcm_hw_params_t* params = NULL;
 	int rate = d->sampleRate;
    	int err;
 
    	if ((err = snd_pcm_hw_params_malloc(&params)) < 0) {
-   		fprintf(stderr, "Cannot allocate hardware parameter structure (%s, %d)\n", snd_strerror(err), err);
+   		eprintf("Cannot allocate hardware parameter structure (%s, %d)", snd_strerror(err), err);
    		goto out;
    	}
 
    	if ((err = snd_pcm_hw_params_any(d->capDev, params)) < 0) {
-   		fprintf(stderr, "Cannot initialize hardware parameter structure (%s, %d)\n", snd_strerror(err), err);
+   		eprintf("Cannot initialize hardware parameter structure (%s, %d)", snd_strerror(err), err);
    		goto out;
    	}
 
    	if ((err = snd_pcm_hw_params_set_access(d->capDev, params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0) {
-   		fprintf(stderr, "Cannot set access type (%s, %d)\n", snd_strerror(err), err);
+   		eprintf("Cannot set access type (%s, %d)", snd_strerror(err), err);
    		goto out;
    	}
 
    	if ((err = snd_pcm_hw_params_set_format(d->capDev, params,SND_PCM_FORMAT_S16_LE)) < 0) {
-   		fprintf(stderr, "Cannot set sample format (%s, %d)\n", snd_strerror(err), err);
+   		eprintf("Cannot set sample format (%s, %d)", snd_strerror(err), err);
    		goto out;
    	}
 
    	if ((err = snd_pcm_hw_params_set_rate_near(d->capDev, params, &rate, 0)) < 0) {
-   		fprintf(stderr, "Cannot set sample rate (%s, %d)\n", snd_strerror(err), err);
+   		eprintf("Cannot set sample rate (%s, %d)", snd_strerror(err), err);
    		goto out;
    	}
 
    	if ((err = snd_pcm_hw_params_set_channels(d->capDev, params, 1)) < 0) {
-   		fprintf(stderr, "Cannot set channel count (%s, %d)\n", snd_strerror(err), err);
+   		eprintf("Cannot set channel count (%s, %d)", snd_strerror(err), err);
    		goto out;
    	}
 
    	if ((err = snd_pcm_hw_params(d->capDev, params)) < 0) {
-   		fprintf(stderr, "Cannot set parameters (%s, %d)\n", snd_strerror(err), err);
+   		eprintf("Cannot set parameters (%s, %d)", snd_strerror(err), err);
    		goto out;
    	}
 
@@ -171,7 +179,7 @@ static inline bool notStopped(Detector* d) {
    	return *d->stopFlagPtr == 0;
 }
 
-static int readSamples(Detector* d, int16_t* buf, int maxSampleCount) {
+static int readSamples(Detector* d, int16_t* buf, int maxSampleCount, EStr* estr) {
 	int err;
 	while (notStopped(d)) {
    		int n = snd_pcm_readi(d->capDev, buf, maxSampleCount);
@@ -183,13 +191,13 @@ static int readSamples(Detector* d, int16_t* buf, int maxSampleCount) {
    		}
 
    		err = n;
-   		fprintf(stderr, "read from audio interface failed (%s, %d)\n", snd_strerror(err), err);
+   		eprintf("Read from audio interface failed (%s, %d)", snd_strerror(err), err);
    		if (err != -32)
    			return err;
 
    		// Broken pipe
    		if ((err = snd_pcm_prepare(d->capDev)) < 0) {
-   			fprintf(stderr, "Cannot prepare audio interface for use (%s, %d)\n", snd_strerror(err), err);
+   			eprintf("Cannot prepare audio interface for use (%s, %d)", snd_strerror(err), err);
    			return err;
    		}
    	}
@@ -215,13 +223,13 @@ static short getMaxLoud(const int16_t* samples, int sampleCount) {
    	return max;
 }
 
-static int waitHotWord(Detector* d) {
+static int waitHotWord(Detector* d, EStr* estr) {
    	const int bufSize = pv_porcupine_frame_length();
    	int16_t buf[bufSize];
 
    	bool detected = false;
    	while (notStopped(d)) {
-   		int n = readSamples(d, buf, bufSize);
+   		int n = readSamples(d, buf, bufSize, estr);
    		if (n < 0)
    			return n;
 
@@ -243,7 +251,7 @@ static int waitHotWord(Detector* d) {
    	return -EINTR;
 }
 
-static int soundCapture(Detector* d, int16_t* outputBuffer, int maxSampleCount) {
+static int soundCapture(Detector* d, int16_t* outputBuffer, int maxSampleCount, EStr* estr) {
    	const int bufSize = pv_porcupine_frame_length();
    	int16_t buf[bufSize];
 
@@ -251,7 +259,7 @@ static int soundCapture(Detector* d, int16_t* outputBuffer, int maxSampleCount) 
    	int currentBufferFill = 0;
    	int startSilenceFrames = 0;
    	while (notStopped(d)) {
-   		int n = readSamples(d, buf, bufSize);
+   		int n = readSamples(d, buf, bufSize, estr);
    		if (n < 0)
    			return n;
 
@@ -318,11 +326,11 @@ static int soundCapture(Detector* d, int16_t* outputBuffer, int maxSampleCount) 
    	return -EINTR;
 }
 
-static int detect(Detector* d, int16_t* buffer, int maxSampleCount) {
-   	int err = waitHotWord(d);
+static int detect(Detector* d, int16_t* buffer, int maxSampleCount, EStr* estr) {
+   	int err = waitHotWord(d, estr);
    	if (err)
    		return err;
-   	return soundCapture(d, buffer, maxSampleCount);
+   	return soundCapture(d, buffer, maxSampleCount, estr);
 }
 */
 import "C"
@@ -330,11 +338,12 @@ import "C"
 import (
 	"errors"
 	"fmt"
-	"os"
 	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/rmcsoft/hasp/events"
 )
@@ -375,6 +384,10 @@ type HotWordDetector struct {
 	originState    string
 }
 
+func (estr *C.EStr) String() string {
+	return C.GoString((*C.char)(unsafe.Pointer(estr)))
+}
+
 // NewHotWordDetector creates HotWordDetector
 func NewHotWordDetector(params HotWordDetectorParams) (*HotWordDetector, error) {
 	d := &HotWordDetector{
@@ -382,13 +395,16 @@ func NewHotWordDetector(params HotWordDetectorParams) (*HotWordDetector, error) 
 		sessionChan: make(chan *hotWordDetectorSession),
 	}
 
+	var estr C.EStr
 	d.detector = C.newDetector(
 		C.CString(params.CaptureDeviceName),
 		C.CString(params.ModelPath), C.CString(params.KeywordPath),
 		C.float(sensitivity),
+		&estr,
 	)
 	if d.detector == nil {
-		return nil, errors.New("Couldn't create detector")
+		err := fmt.Errorf("Couldn't create detector: %s", &estr)
+		return nil, err
 	}
 
 	go d.run()
@@ -419,6 +435,7 @@ func (d *HotWordDetector) startSession(mode hotWordDetectorMode) (events.EventSo
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
+	log.Info("HotWordDetector: start session")
 	if d.currentSession != nil {
 		return nil, errors.New("HotWordDetector busy")
 	}
@@ -439,7 +456,7 @@ func (d *HotWordDetector) sessionClosed(session *hotWordDetectorSession) {
 	defer d.mutex.Unlock()
 
 	if session != d.currentSession {
-		panic("HotWordDetector.sessionClosed: session != d.currentSession")
+		log.Panic("HotWordDetector.sessionClosed: session != d.currentSession")
 	}
 
 	d.currentSession = nil
@@ -457,8 +474,11 @@ func (d *HotWordDetector) runSession(session *hotWordDetectorSession) {
 	defer close(session.eventChan)
 	defer C.sessionClosed(d.detector)
 
-	if !C.startSession(d.detector, (*C.int32_t)(&session.stopFlag)) {
-		fmt.Fprintf(os.Stderr, "Failed to start a new session of the hotword detector\n")
+	var estr C.EStr
+	if !C.startSession(d.detector, (*C.int32_t)(&session.stopFlag), &estr) {
+		// TODO:  Reaction to an error
+		err := fmt.Errorf("Failed to start a new session of the hotword detector: %v", &estr)
+		log.Errorf("HotWordDetector: %v", err)
 		return
 	}
 
@@ -470,6 +490,8 @@ func (d *HotWordDetector) runSession(session *hotWordDetectorSession) {
 			d.doSoundCapture(session)
 		}
 	}
+
+	log.Info("HotWordDetector: session closed")
 }
 
 func (d *HotWordDetector) makeSampleBuf() (buf []byte, cptr *C.int16_t, maxSampleCount int) {
@@ -484,19 +506,20 @@ func (d *HotWordDetector) makeAudioData(buf []byte, sampleCount C.int) *AudioDat
 	return NewMonoS16LE(d.SampleRate(), buf[0:sizeInBytes])
 }
 
-func (d *HotWordDetector) handleError(session *hotWordDetectorSession, op string, errcode int) {
+func (d *HotWordDetector) handleError(session *hotWordDetectorSession, op string, estr *C.EStr) {
 	if session.notStopped() {
-		fmt.Fprintf(os.Stderr, "%s failed: err=%v\n", op, errcode)
+		// TODO:  Reaction to an error
+		err := fmt.Errorf("%s failed: %v", op, estr)
+		log.Errorf("HotWordDetector: %v", err)
 	}
 }
 
 func (d *HotWordDetector) doDetectHotWord(session *hotWordDetectorSession) {
-	// fmt.Println("HotWordDetector.doDetectHotWord")
-
 	buf, cptr, maxSampleCount := d.makeSampleBuf()
-	sampleCount := C.detect(d.detector, cptr, C.int(maxSampleCount))
+	var estr C.EStr
+	sampleCount := C.detect(d.detector, cptr, C.int(maxSampleCount), &estr)
 	if sampleCount < 0 {
-		d.handleError(session, "HotWordDetect", int(sampleCount))
+		d.handleError(session, "HotWordDetect", &estr)
 		return
 	}
 
@@ -504,12 +527,11 @@ func (d *HotWordDetector) doDetectHotWord(session *hotWordDetectorSession) {
 }
 
 func (d *HotWordDetector) doSoundCapture(session *hotWordDetectorSession) {
-	// fmt.Println("HotWordDetector.doSoundCapture")
-
 	buf, cptr, maxSampleCount := d.makeSampleBuf()
-	sampleCount := C.soundCapture(d.detector, cptr, C.int(maxSampleCount))
+	var estr C.EStr
+	sampleCount := C.soundCapture(d.detector, cptr, C.int(maxSampleCount), &estr)
 	if sampleCount < 0 {
-		d.handleError(session, "SoundCapture", int(sampleCount))
+		d.handleError(session, "SoundCapture", &estr)
 		return
 	}
 
