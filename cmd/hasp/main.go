@@ -39,6 +39,14 @@ type options struct {
 	VisualizeFSM bool `long:"visualize-fsm" description:"Visualize character FSM in Graphviz format (file character.dot)"`
 }
 
+type logrusProxy struct {
+}
+
+// Log is a utility function to comply with the AWS signature
+func (logrusProxy) Log(args ...interface{}) {
+	log.Info(args...)
+}
+
 func parseCmd() options {
 	var opts options
 	var cmdParser = flags.NewParser(&opts, flags.HelpFlag|flags.PassDoubleDash)
@@ -111,6 +119,7 @@ func makeAwsSession(opts options) *session.Session {
 		Region:      aws.String("us-east-1"),
 		Credentials: credentials.NewStaticCredentials(opts.AwsID, opts.AwsSecret, ""),
 		LogLevel:    aws.LogLevel(aws.LogDebugWithRequestErrors),
+		Logger:      logrusProxy{},
 	})
 
 	if err != nil {
