@@ -1,8 +1,6 @@
 package hasp
 
 import (
-	"fmt"
-
 	"github.com/aws/aws-sdk-go/service/lexruntimeservice"
 	"github.com/rmcsoft/hasp/events"
 	"github.com/rmcsoft/hasp/haspaws"
@@ -25,7 +23,6 @@ func NewProcessingState(availableAnimations []string, lrs *lexruntimeservice.Lex
 }
 
 func (s *processingState) Enter(ctx CharacterCtx, event events.Event) (events.EventSources, error) {
-	fmt.Printf("ProcessingState Enter\n")
 
 	data, _ := sound.GetSoundCapturedEventData(&event)
 	userId, ok := ctx[CtxUserId]
@@ -45,7 +42,6 @@ func (s *processingState) Enter(ctx CharacterCtx, event events.Event) (events.Ev
 }
 
 func (s *processingState) Leave(ctx CharacterCtx, event events.Event) bool {
-	fmt.Printf("ProcessingState Leave\n")
 	return true
 }
 
