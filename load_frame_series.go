@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/rmcsoft/chanim"
+	"github.com/sirupsen/logrus"
 )
 
 func loadFrames(path string) ([]chanim.Frame, error) {
@@ -18,6 +19,7 @@ func loadFrames(path string) ([]chanim.Frame, error) {
 
 	frames := make([]chanim.Frame, 0, len(ppixmapFiles))
 	for _, ppixmapFile := range ppixmapFiles {
+		logrus.Debugf("Loading frame from %v", ppixmapFile)
 		ppixmap, err := chanim.MMapPackedPixmap(ppixmapFile)
 		if err != nil {
 			return nil, err

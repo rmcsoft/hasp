@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/rmcsoft/chanim"
+	"github.com/sirupsen/logrus"
 )
 
 func isTransitFrameSeries(frameSeries chanim.FrameSeries) bool {
@@ -142,16 +143,21 @@ func initTransitionFrames(animations chanim.Animations, allFrameSeries []chanim.
 
 // CreateAnimator creates an animator
 func CreateAnimator(paintEngine chanim.PaintEngine, frameSeriesPath string) (*chanim.Animator, error) {
+	logrus.Debug("Loading frames")
 	allFrameSeries, err := LoadFrameSeries(frameSeriesPath)
 	if err != nil {
 		return nil, err
 	}
 
+	logrus.Debug("Creating animations")
 	animations, err := createAnimations(allFrameSeries)
 	if err != nil {
 		return nil, err
 	}
 
+	logrus.Debug("Initializing transition frames")
 	allFrameSeries = initTransitionFrames(animations, allFrameSeries)
+
+	logrus.Debug("Making animator")
 	return chanim.NewAnimator(paintEngine, animations, allFrameSeries)
 }

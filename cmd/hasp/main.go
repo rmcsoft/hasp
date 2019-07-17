@@ -83,7 +83,9 @@ func makePaintEngine(opts options) chanim.PaintEngine {
 }
 
 func makeAnimator(opts options) *chanim.Animator {
+	log.Debug("Making paint engine")
 	paintEngine := makePaintEngine(opts)
+	log.Debug("Creating animator")
 	animator, err := hasp.CreateAnimator(paintEngine, opts.PackedImageDir)
 	if err != nil {
 		log.Fatal(err)
@@ -247,6 +249,7 @@ func main() {
 		FullTimestamp:   true,
 		TimestampFormat: "2006-01-02T15:04:05.999",
 	})
+	//log.SetLevel(log.DebugLevel)
 
 	opts := parseCmd()
 
