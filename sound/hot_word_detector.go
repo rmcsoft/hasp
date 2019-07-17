@@ -18,6 +18,8 @@ package sound
 #include <alsa/asoundlib.h>
 #include <pv_porcupine.h>
 
+#include "estr.h"
+
 typedef struct {
 	volatile int32_t* stopFlagPtr;
 
@@ -25,11 +27,6 @@ typedef struct {
 	pv_porcupine_object_t* porcupine;
 	int sampleRate;
 } Detector;
-
-#define ESTRN 256
-typedef char EStr[ESTRN];
-
-#define eprintf(fromat...) snprintf(*estr, ESTRN, fromat)
 
 static snd_pcm_t* openCaptureDev(const char* deviceName, unsigned int rate, EStr* estr) {
    	int err;
@@ -402,10 +399,6 @@ type HotWordDetector struct {
 	originState    string
 }
 
-func (estr *C.EStr) String() string {
-	return C.GoString((*C.char)(unsafe.Pointer(estr)))
-}
-
 // NewHotWordDetector creates HotWordDetector
 func NewHotWordDetector(params HotWordDetectorParams) (*HotWordDetector, error) {
 	d := &HotWordDetector{
@@ -413,15 +406,15 @@ func NewHotWordDetector(params HotWordDetectorParams) (*HotWordDetector, error) 
 		sessionChan: make(chan *hotWordDetectorSession),
 	}
 
-	var estr C.EStr
+	estr := &C.EStr{}
 	d.detector = C.newDetector(
 		C.CString(params.CaptureDeviceName),
 		C.CString(params.ModelPath), C.CString(params.KeywordPath),
 		C.float(sensitivity),
-		&estr,
+		estr,
 	)
 	if d.detector == nil {
-		err := fmt.Errorf("Couldn't create detector: %s", &estr)
+		err := fmt.Errorf("Couldn't create detector: %v", estr)
 		return nil, err
 	}
 
@@ -492,10 +485,10 @@ func (d *HotWordDetector) runSession(session *hotWordDetectorSession) {
 	defer close(session.eventChan)
 	defer C.sessionClosed(d.detector)
 
-	var estr C.EStr
-	if !C.startSession(d.detector, (*C.int32_t)(&session.stopFlag), &estr) {
+	estr := &C.EStr{}
+	if !C.startSession(d.detector, (*C.int32_t)(&session.stopFlag), estr) {
 		// TODO:  Reaction to an error
-		err := fmt.Errorf("Failed to start a new session of the hotword detector: %v", &estr)
+		err := fmt.Errorf("Failed to start a new session of the hotword detector: %v", estr)
 		log.Errorf("HotWordDetector: %v", err)
 		return
 	}
@@ -534,10 +527,10 @@ func (d *HotWordDetector) handleError(session *hotWordDetectorSession, op string
 
 func (d *HotWordDetector) doDetectHotWord(session *hotWordDetectorSession) {
 	buf, cptr, maxSampleCount := d.makeSampleBuf()
-	var estr C.EStr
-	sampleCount := C.detect(d.detector, cptr, C.int(maxSampleCount), &estr)
+	estr := &C.EStr{}
+	sampleCount := C.detect(d.detector, cptr, C.int(maxSampleCount), estr)
 	if sampleCount < 0 {
-		d.handleError(session, "HotWordDetect", &estr)
+		d.handleError(session, "HotWordDetect", estr)
 		return
 	}
 
@@ -546,10 +539,10 @@ func (d *HotWordDetector) doDetectHotWord(session *hotWordDetectorSession) {
 
 func (d *HotWordDetector) doSoundCapture(session *hotWordDetectorSession) {
 	buf, cptr, maxSampleCount := d.makeSampleBuf()
-	var estr C.EStr
-	sampleCount := C.soundCapture(d.detector, cptr, C.int(maxSampleCount), &estr)
+	estr := &C.EStr{}
+	sampleCount := C.soundCapture(d.detector, cptr, C.int(maxSampleCount), estr)
 	if sampleCount < 0 {
-		d.handleError(session, "SoundCapture", &estr)
+		d.handleError(session, "SoundCapture", estr)
 		return
 	}
 
