@@ -3,10 +3,13 @@ package sound
 /*
 #cgo pkg-config: alsa
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <alsa/asoundlib.h>
 
-static snd_pcm_t* openDevice(const char *deviceName, unsigned int rate) {
+#include "estr.h"
+
+static snd_pcm_t* openDevice(const char *deviceName, unsigned int rate, EStr* estr) {
 	int err = 0;
 
 	snd_pcm_hw_params_t* params = NULL;
@@ -14,49 +17,49 @@ static snd_pcm_t* openDevice(const char *deviceName, unsigned int rate) {
 
 	if ((err = snd_pcm_open(&handle, deviceName, SND_PCM_STREAM_PLAYBACK, 0)) < 0)
 	{
-		fprintf(stderr, "Cannot open playback audio device %s (%s, %d)\n", deviceName, snd_strerror(err), err);
+		eprintf("Cannot open playback audio device %s (%s, %d)\n", deviceName, snd_strerror(err), err);
 		goto out;
 	}
 
 	if ((err = snd_pcm_hw_params_malloc(&params)) < 0)
 	{
-		fprintf(stderr, "Cannot allocate hardware parameter structure (%s, %d)\n", snd_strerror(err), err);
+		eprintf("Cannot allocate hardware parameter structure (%s, %d)\n", snd_strerror(err), err);
 		goto out;
 	}
 
 	if ((err = snd_pcm_hw_params_any(handle, params)) < 0)
 	{
-		fprintf(stderr, "Cannot initialize hardware parameter structure (%s, %d)\n", snd_strerror(err), err);
+		eprintf("Cannot initialize hardware parameter structure (%s, %d)\n", snd_strerror(err), err);
 		goto out;
 	}
 
 	if ((err = snd_pcm_hw_params_set_access(handle, params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0)
 	{
-		fprintf(stderr, "Cannot set access type (%s, %d)\n", snd_strerror(err), err);
+		eprintf("Cannot set access type (%s, %d)\n", snd_strerror(err), err);
 		goto out;
 	}
 
 	if ((err = snd_pcm_hw_params_set_format(handle, params, SND_PCM_FORMAT_S16_LE)) < 0)
 	{
-		fprintf(stderr, "Cannot set sample format (%s, %d)\n", snd_strerror(err), err);
+		eprintf("Cannot set sample format (%s, %d)\n", snd_strerror(err), err);
 		goto out;
 	}
 
 	if ((err = snd_pcm_hw_params_set_rate_near(handle, params, &rate, 0)) < 0)
 	{
-		fprintf(stderr, "Cannot set sample rate (%s, %d)\n", snd_strerror(err), err);
+		eprintf("Cannot set sample rate (%s, %d)\n", snd_strerror(err), err);
 		goto out;
 	}
 
 	if ((err = snd_pcm_hw_params_set_channels(handle, params, 1))< 0)
 	{
-		fprintf(stderr, "Cannot set channel count (%s, %d)\n", snd_strerror(err), err);
+		eprintf("Cannot set channel count (%s, %d)\n", snd_strerror(err), err);
 		goto out;
 	}
 
 	if ((err = snd_pcm_hw_params(handle, params)) < 0)
 	{
-		fprintf(stderr, "Cannot set parameters (%s, %d)\n", snd_strerror(err), err);
+		eprintf("Cannot set parameters (%s, %d)\n", snd_strerror(err), err);
 		goto out;
 	}
 
@@ -75,18 +78,17 @@ out:
 	return handle;
 }
 
-static int playback(snd_pcm_t* handle, const int16_t* buf, int bufSize) {
+static bool playback(snd_pcm_t* handle, const int16_t* buf, int bufSize, EStr* estr) {
 	int err = 0;
 
     if ((err = snd_pcm_writei(handle, buf, bufSize)) != bufSize)
     {
-        fprintf(stderr, "write to audio interface failed (%s)\n", snd_strerror (err));
-        return err;
+        eprintf("write to audio interface failed (%s)\n", snd_strerror (err));
+        return false;
 	}
 
     snd_pcm_drain(handle);
-
-	return 0;
+	return true;
 }
 */
 import "C"
@@ -98,6 +100,7 @@ import (
 	"unsafe"
 
 	"github.com/rmcsoft/hasp/events"
+	log "github.com/sirupsen/logrus"
 )
 
 // SoundPlayedEventName an event with this name is emitted when the sound is played
@@ -124,33 +127,42 @@ func NewSoundPlayer(devName string) (*SoundPlayer, error) {
 
 // Play starts playing back buffer
 func (p *SoundPlayer) Play(audioData *AudioData) (events.EventSource, error) {
-
 	p.devMutex.Lock()
 	defer p.devMutex.Unlock()
+
 	p.stop(false)
 
 	if audioData.SampleType() != S16LE || audioData.ChannelCount() != 1 {
 		return nil, errors.New("Unsupported audio format")
 	}
 
-	p.dev = C.openDevice(C.CString(p.devName), C.uint(audioData.SampleRate()))
+	estr := &C.EStr{}
+	p.dev = C.openDevice(C.CString(p.devName), C.uint(audioData.SampleRate()), estr)
 	if p.dev == nil {
-		return nil, errors.New("Could't open audio device for playback")
+		err := fmt.Errorf("Could't open audio device for playback: %v", estr)
+		return nil, err
 	}
 
 	asyncPlay := func() *events.Event {
-		fmt.Println("StartPlay")
+		log.Info("SoundPlayer: StartPlay")
 		sampleCount := audioData.SampleCount()
 		if sampleCount == 0 {
-			fmt.Println("NothingToPlay")
+			log.Info("SoundPlayer: NothingToPlay")
 			p.closeDev()
 			return &events.Event{Name: SoundPlayedEventName}
 		}
 		samples := audioData.Samples()
+
+		estr := &C.EStr{}
 		cptr := (*C.int16_t)(unsafe.Pointer(&samples[0]))
-		C.playback(p.dev, cptr, C.int(sampleCount))
+		if !C.playback(p.dev, cptr, C.int(sampleCount), estr) {
+			// TODO:  Reaction to an error
+			err := fmt.Errorf("Playback failed: %v", estr)
+			log.Errorf("HotWordDetector: %v", err)
+		}
 		p.closeDev()
-		fmt.Println("StopPlay")
+		log.Info("SoundPlayer: StopPlay")
+
 		return &events.Event{Name: SoundPlayedEventName}
 	}
 
@@ -174,6 +186,8 @@ func (p *SoundPlayer) stop(useLock bool) {
 		for p.dev != nil {
 			p.devClosedCond.Wait()
 		}
+
+		log.Info("SoundPlayer: stopped")
 	}
 }
 
