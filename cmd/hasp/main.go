@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"image"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -37,6 +38,8 @@ type options struct {
 	AwsSecret      string `short:"w" long:"aws-secret" description:"AWS key" required:"true"`
 
 	VisualizeFSM bool `long:"visualize-fsm" description:"Visualize character FSM in Graphviz format (file character.dot)"`
+
+	SplashScreenPath string `long:"splash-screen" description:"Image for splash screen (ppixmap format)"`
 
 	Config func(s string) error `long:"config" no-ini:"true"`
 }
@@ -78,6 +81,27 @@ func parseOpts() options {
 	return opts
 }
 
+func showSplashScreen(opts options, paintEngine chanim.PaintEngine) {
+	if len(opts.SplashScreenPath) == 0 {
+		log.Warn("Splash screen is not set")
+		return
+	}
+
+	splashScreen, err := chanim.LoadPackedPixmap(opts.SplashScreenPath)
+	if err != nil {
+		log.Errorf("Unable to load splash screen from '%s': %v", opts.SplashScreenPath, err)
+		return
+	}
+
+	log.Debug("Show splash screen")
+	top := image.Point{
+		X: (paintEngine.GetWidth() - splashScreen.Width) / 2,
+		Y: (paintEngine.GetHeight() - splashScreen.Height) / 2,
+	}
+	paintEngine.Clear(image.Rect(0, 0, paintEngine.GetWidth(), paintEngine.GetHeight()))
+	paintEngine.DrawPackedPixmap(top, splashScreen)
+}
+
 func makePaintEngine(opts options) chanim.PaintEngine {
 	var err error
 	var paintEngine chanim.PaintEngine
@@ -89,7 +113,7 @@ func makePaintEngine(opts options) chanim.PaintEngine {
 	if err != nil {
 		log.Fatal(err)
 	}
-
+	showSplashScreen(opts, paintEngine)
 	return paintEngine
 }
 
