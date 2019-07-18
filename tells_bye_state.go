@@ -20,11 +20,16 @@ func NewTellsByeState(availableAnimations []string) State {
 }
 
 func (s *tellsByeState) Enter(ctx CharacterCtx, event events.Event) (events.EventSources, error) {
+	s.byeSpeech = nil
 	if len(event.Args) > 0 {
 		data, _ := haspaws.GetStopEventData(&event)
 		s.byeSpeech = data.StopSpeach
-	} else {
-		s.byeSpeech = nil
+	}
+
+	if s.byeSpeech == nil {
+		return events.EventSources{events.NewSingleEventSource(sound.SoundPlayedEventName, func() *events.Event {
+			return &events.Event{Name: sound.SoundPlayedEventName}
+		})}, nil
 	}
 	return nil, nil
 }

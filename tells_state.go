@@ -23,6 +23,10 @@ func NewTellsState(availableAnimations []string) State {
 func (s *tellsState) Enter(ctx CharacterCtx, event events.Event) (events.EventSources, error) {
 	data, _ := haspaws.GetAwsRepliedEventData(&event)
 	s.speech = data.RepliedSpeech
+	if s.speech == nil || len(s.speech.Samples()) == 0 {
+		return events.EventSources{events.NewSingleEventSource(sound.SoundPlayedEventName, func() *events.Event {
+			return &events.Event{Name: sound.SoundPlayedEventName} }) }, nil
+	}
 	return nil, nil
 }
 

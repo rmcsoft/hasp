@@ -53,7 +53,7 @@ func (h *awsLexRuntime) run() {
 	defer close(h.eventChan)
 
 	req, resp := h.lrs.PostContentRequest(&lexruntimeservice.PostContentInput{
-		BotAlias:    aws.String("latest"),
+		BotAlias:    aws.String("Prod"),
 		BotName:     aws.String("HASPBot"),
 		ContentType: aws.String(h.audioData.Mime()),
 		UserId:      aws.String(h.userId),
@@ -61,7 +61,7 @@ func (h *awsLexRuntime) run() {
 		Accept:      aws.String("audio/pcm"),
 	})
 
-	log.Infof("Send request to runtime.lex")
+	log.Debug("Send request to runtime.lex")
 	err := req.Send()
 
 	if err != nil {
@@ -71,7 +71,13 @@ func (h *awsLexRuntime) run() {
 		return
 	}
 
-	log.Infof("Response runtime.lex: %v", resp)
+	log.Trace("Response runtime.lex: %v", resp)
+	if resp.InputTranscript != nil {
+		log.Infof("InputTranscript: ", *resp.InputTranscript)
+	}
+	if resp.Message != nil {
+		log.Infof("Message: ", *resp.Message)
+	}
 
 	if resp.AudioStream == nil {
 		h.gotStop(nil) // TODO: Reaction to an error, h.gotNoReply ?
@@ -85,12 +91,12 @@ func (h *awsLexRuntime) run() {
 		log.Errorf("Unable to read audio data from the runtime.lex response")
 		return
 	}
-	replaiedSpeech := sound.NewAudioData(h.replaiedAudioFormat, samples)
+	repliedSpeech := sound.NewAudioData(h.replaiedAudioFormat, samples)
 
 	if resp.IntentName != nil && *resp.IntentName == "StopIteraction" {
-		h.gotStop(replaiedSpeech)
+		h.gotStop(repliedSpeech)
 	} else {
-		h.gotReply(replaiedSpeech)
+		h.gotReply(repliedSpeech)
 	}
 }
 
@@ -109,7 +115,8 @@ func (h *awsLexRuntime) makeInputStream() io.ReadSeeker {
 	f, _ := os.Create(fmt.Sprintf("./tmp/data-%v.pcm", t.Format("20060102150405")))
 	defer f.Close()
 	f.Write(samples)
-*/
+	*/
+
 	reader := bytes.NewReader(samples)
 	return aws.ReadSeekCloser(reader)
 }

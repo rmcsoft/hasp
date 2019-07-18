@@ -204,7 +204,6 @@ static int readSamples(Detector* d, int16_t* buf, int maxSampleCount, EStr* estr
 #define DEBUG_VOICE
 #define NOISE_THRESHOLD 6000
 #define NOISE_FRAMES 50
-#define MAX_SILENCE_FRAMES 140
 
 static short getMaxLoud(const int16_t* samples, int sampleCount) {
    	int16_t max = 0;
@@ -249,24 +248,28 @@ static int waitHotWord(Detector* d, EStr* estr) {
    	return -EINTR;
 }
 
-static int soundCapture(Detector* d, int16_t* outputBuffer, int maxSampleCount, EStr* estr) {
+static int soundCapture(Detector* d, int16_t* outputBuffer, int maxSampleCount, int startSoundWaitFrames, EStr* estr) {
    	const int bufSize = pv_porcupine_frame_length();
-   	int16_t buf[bufSize];
 
-#define SECOND_BUFFER_SIZE (512*30)
-#define PRE_BUFFER_SIZE (3 * SECOND_BUFFER_SIZE)
- 	int16_t preBuffer[PRE_BUFFER_SIZE] = {0};
-	int currentPreBufferPosition = 0;
+#define REC_BUFFERS_NUM (100)
+ 	int16_t buffers[REC_BUFFERS_NUM][bufSize];
+	int currentBufferIndex = 0;
 
    	int16_t silenseSens = -1;
    	int currentBufferFill = 0;
    	int startSilenceFrames = 0;
+	memset(buffers, 0, REC_BUFFERS_NUM * bufSize * sizeof(int16_t));
    	while (notStopped(d)) {
-   		int n = readSamples(d, buf, bufSize, estr);
+   		int n = readSamples(d, buffers[currentBufferIndex], bufSize, estr);
    		if (n < 0)
    			return n;
 
-   		int16_t maxLoud = getMaxLoud(buf, n);
+		if (n != bufSize) {
+			eprintf("Read %d samples, expected %d.", n, bufSize);
+   			return -1;
+		}
+
+   		int16_t maxLoud = getMaxLoud(buffers[currentBufferIndex], n);
 
    		if (n > maxSampleCount - currentBufferFill)
    			n = maxSampleCount - currentBufferFill;
@@ -277,32 +280,29 @@ static int soundCapture(Detector* d, int16_t* outputBuffer, int maxSampleCount, 
 #endif
 
    				silenseSens = NOISE_FRAMES;
-
-   				memcpy(outputBuffer, preBuffer + currentPreBufferPosition, (PRE_BUFFER_SIZE - currentPreBufferPosition) * sizeof(int16_t));
-   				memcpy(outputBuffer + PRE_BUFFER_SIZE - currentPreBufferPosition, preBuffer, (currentPreBufferPosition) * sizeof(int16_t));
-   				currentBufferFill = PRE_BUFFER_SIZE;
-
-   				memcpy(outputBuffer + currentBufferFill, buf, n*sizeof(int16_t));
-   				currentBufferFill += n;
+				{
+					int i = 0;
+	   			    currentBufferIndex = (currentBufferIndex + 1) % REC_BUFFERS_NUM;
+					for (i = 0; i < REC_BUFFERS_NUM; ++i) {
+						int16_t *buffer = buffers[(currentBufferIndex + i) % REC_BUFFERS_NUM];
+		   				memcpy(outputBuffer + i*bufSize, buffer, bufSize * sizeof(int16_t));
+					}
+				}
+   				currentBufferFill = REC_BUFFERS_NUM * bufSize;
    			} else {
    				#ifdef DEBUG_VOICE
    				printf("?"); fflush(stdout);
    				#endif
 
-   				memcpy(preBuffer + currentPreBufferPosition, buf, n*sizeof(int16_t));
-   				currentPreBufferPosition += n;
-   				if (currentPreBufferPosition >= PRE_BUFFER_SIZE)	{
-	   				printf("! %d (+ %d)\n", currentPreBufferPosition, n); fflush(stdout);
-					currentPreBufferPosition = 0;
-				}
+	   			currentBufferIndex = (currentBufferIndex + 1) % REC_BUFFERS_NUM;
 
    				startSilenceFrames++;
-   				if (startSilenceFrames >= MAX_SILENCE_FRAMES) {
+   				if (startSilenceFrames >= startSoundWaitFrames) {
    					return 0;
    				}
    			}
    		} else {
-   			memcpy(outputBuffer + currentBufferFill, buf, n*sizeof(int16_t));
+   			memcpy(outputBuffer + currentBufferFill, buffers[currentBufferIndex], n*sizeof(int16_t));
    			currentBufferFill += n;
 
    			if (maxLoud > NOISE_THRESHOLD) {
@@ -345,7 +345,7 @@ static int detect(Detector* d, int16_t* buffer, int maxSampleCount, EStr* estr) 
    	int err = waitHotWord(d, estr);
    	if (err)
    		return err;
-   	return soundCapture(d, buffer, maxSampleCount, estr);
+   	return soundCapture(d, buffer, maxSampleCount, NOISE_FRAMES, estr);
 }
 */
 import "C"
@@ -366,6 +366,8 @@ import (
 const (
 	recTime     int64   = int64(time.Duration(10) * time.Second)
 	sensitivity float32 = 0.5
+	startSilenceFramesMax = 140
+
 )
 
 // HotWordDetectorParams HotWordDetector params
@@ -540,7 +542,7 @@ func (d *HotWordDetector) doDetectHotWord(session *hotWordDetectorSession) {
 func (d *HotWordDetector) doSoundCapture(session *hotWordDetectorSession) {
 	buf, cptr, maxSampleCount := d.makeSampleBuf()
 	estr := &C.EStr{}
-	sampleCount := C.soundCapture(d.detector, cptr, C.int(maxSampleCount), estr)
+	sampleCount := C.soundCapture(d.detector, cptr, C.int(maxSampleCount), startSilenceFramesMax, estr)
 	if sampleCount < 0 {
 		d.handleError(session, "SoundCapture", estr)
 		return
