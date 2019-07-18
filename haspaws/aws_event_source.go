@@ -16,22 +16,22 @@ import (
 )
 
 type awsLexRuntime struct {
-	eventChan           chan *events.Event
-	lrs                 *lexruntimeservice.LexRuntimeService
-	audioData           *sound.AudioData
-	replaiedAudioFormat sound.AudioFormat
-	userId              string
+	eventChan          chan *events.Event
+	lrs                *lexruntimeservice.LexRuntimeService
+	audioData          *sound.AudioData
+	repliedAudioFormat sound.AudioFormat
+	userId             string
 }
 
 // NewLexEventSource creates LexEventSource
 func NewLexEventSource(lrs *lexruntimeservice.LexRuntimeService,
 	audioData *sound.AudioData, userId string) (events.EventSource, error) {
 	h := &awsLexRuntime{
-		eventChan:           make(chan *events.Event),
-		lrs:                 lrs,
-		audioData:           audioData,
-		userId:              userId,
-		replaiedAudioFormat: audioData.Format(),
+		eventChan:          make(chan *events.Event),
+		lrs:                lrs,
+		audioData:          audioData,
+		userId:             userId,
+		repliedAudioFormat: audioData.Format(),
 	}
 
 	go h.run()
@@ -91,9 +91,9 @@ func (h *awsLexRuntime) run() {
 		log.Errorf("Unable to read audio data from the runtime.lex response")
 		return
 	}
-	repliedSpeech := sound.NewAudioData(h.replaiedAudioFormat, samples)
+	repliedSpeech := sound.NewAudioData(h.repliedAudioFormat, samples)
 
-	if resp.IntentName != nil && *resp.IntentName == "StopIteraction" {
+	if resp.IntentName != nil && *resp.IntentName == "StopInteraction" {
 		h.gotStop(repliedSpeech)
 	} else {
 		h.gotReply(repliedSpeech)

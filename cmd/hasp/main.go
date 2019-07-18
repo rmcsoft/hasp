@@ -95,8 +95,13 @@ func showSplashScreen(opts options, paintEngine chanim.PaintEngine) {
 
 	log.Debug("Show splash screen")
 	top := image.Point{
-		X: (paintEngine.GetWidth() - splashScreen.Width) / 2,
-		Y: (paintEngine.GetHeight() - splashScreen.Height) / 2,
+		X: 0,
+		Y: 0,
+	}
+
+	err = paintEngine.Begin()
+	if err != nil {
+		log.Errorf("Failed to init show splash screen: %v", err)
 	}
 
 	if err := paintEngine.Begin(); err != nil {
@@ -111,13 +116,17 @@ func showSplashScreen(opts options, paintEngine chanim.PaintEngine) {
 	if err := paintEngine.End(); err != nil {
 		log.Errorf("Failed to show splash screen: %v", err)
 	}
+	err = paintEngine.End()
+	if err != nil {
+		log.Errorf("Failed to end show splash screen: %v", err)
+	}
 }
 
 func makePaintEngine(opts options) chanim.PaintEngine {
 	var err error
 	var paintEngine chanim.PaintEngine
 	if opts.UseSDL {
-		paintEngine, err = chanim.NewSDLPaintEngine(1024, 600)
+		paintEngine, err = chanim.NewSDLPaintEngine(600, 1024)
 	} else {
 		paintEngine, err = chanim.NewKMSDRMPaintEngine(0, pixFormat)
 	}
@@ -195,7 +204,7 @@ func makeCharacter(opts options) *hasp.Character {
 	states := hasp.States{
 		"idle": hasp.NewIdleState(
 			[]string{"lotus", "reading", "giggles", "reading"},
-			time.Duration(10)*time.Second,
+			time.Duration(2)*time.Minute,
 			hotWordDetector,
 		),
 		"tells-help": hasp.NewTellsHelpState(
