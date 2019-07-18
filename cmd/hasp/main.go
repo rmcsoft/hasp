@@ -37,6 +37,8 @@ type options struct {
 	AwsSecret      string `short:"w" long:"aws-secret" description:"AWS key" required:"true"`
 
 	VisualizeFSM bool `long:"visualize-fsm" description:"Visualize character FSM in Graphviz format (file character.dot)"`
+
+	Config func(s string) error `long:"config" no-ini:"true"`
 }
 
 type logrusProxy struct {
@@ -47,12 +49,21 @@ func (logrusProxy) Log(args ...interface{}) {
 	log.Info(args...)
 }
 
-func parseCmd() options {
+func parseOpts() options {
+	log.Info("Parsing command line arguments")
+
 	var opts options
 	var cmdParser = flags.NewParser(&opts, flags.HelpFlag|flags.PassDoubleDash)
-	var err error
 
-	if _, err = cmdParser.Parse(); err != nil {
+	opts.Config = func(filename string) error {
+		log.Infof("Parsing configuration file: '%s'", filename)
+		iniParser := flags.NewIniParser(cmdParser)
+		iniParser.ParseAsDefaults = false
+		return iniParser.ParseFile(filename)
+	}
+
+	_, err := cmdParser.Parse()
+	if err != nil {
 		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
 			fmt.Println(flagsErr)
 			os.Exit(0)
@@ -249,9 +260,9 @@ func main() {
 		FullTimestamp:   true,
 		TimestampFormat: "2006-01-02T15:04:05.999",
 	})
-	//log.SetLevel(log.DebugLevel)
+	// log.SetLevel(log.DebugLevel)
 
-	opts := parseCmd()
+	opts := parseOpts()
 
 	character := makeCharacter(opts)
 	err := character.Run()
