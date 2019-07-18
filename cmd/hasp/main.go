@@ -98,15 +98,21 @@ func showSplashScreen(opts options, paintEngine chanim.PaintEngine) {
 		X: (paintEngine.GetWidth() - splashScreen.Width) / 2,
 		Y: (paintEngine.GetHeight() - splashScreen.Height) / 2,
 	}
-	paintEngine.Clear(image.Rect(0, 0, paintEngine.GetWidth(), paintEngine.GetHeight()))
-	paintEngine.DrawPackedPixmap(top, splashScreen)
+	err = paintEngine.Clear(image.Rect(0, 0, paintEngine.GetWidth(), paintEngine.GetHeight()))
+	if err != nil {
+		log.Errorf("Failed to show splash screen: %v", err)
+	}
+	err = paintEngine.DrawPackedPixmap(top, splashScreen)
+	if err != nil {
+		log.Errorf("Failed to show splash screen: %v", err)
+	}
 }
 
 func makePaintEngine(opts options) chanim.PaintEngine {
 	var err error
 	var paintEngine chanim.PaintEngine
 	if opts.UseSDL {
-		paintEngine, err = chanim.NewSDLPaintEngine(600, 1024)
+		paintEngine, err = chanim.NewSDLPaintEngine(1024, 600)
 	} else {
 		paintEngine, err = chanim.NewKMSDRMPaintEngine(0, pixFormat)
 	}
