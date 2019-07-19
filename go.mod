@@ -7,7 +7,7 @@ require (
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/looplab/fsm v0.1.0
 	github.com/myesui/uuid v1.0.0 // indirect
-	github.com/rmcsoft/chanim v0.0.0-20190718141212-b8057ed958cd
+	github.com/rmcsoft/chanim v0.0.0-20190719102737-aea2c4c6d6fd
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.3.0 // indirect
 	github.com/twinj/uuid v1.0.0

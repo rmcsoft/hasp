@@ -98,12 +98,17 @@ func showSplashScreen(opts options, paintEngine chanim.PaintEngine) {
 		X: (paintEngine.GetWidth() - splashScreen.Width) / 2,
 		Y: (paintEngine.GetHeight() - splashScreen.Height) / 2,
 	}
-	err = paintEngine.Clear(image.Rect(0, 0, paintEngine.GetWidth(), paintEngine.GetHeight()))
-	if err != nil {
+
+	if err := paintEngine.Begin(); err != nil {
 		log.Errorf("Failed to show splash screen: %v", err)
 	}
-	err = paintEngine.DrawPackedPixmap(top, splashScreen)
-	if err != nil {
+	if err := paintEngine.Clear(image.Rect(0, 0, paintEngine.GetWidth(), paintEngine.GetHeight())); err != nil {
+		log.Errorf("Failed to show splash screen: %v", err)
+	}
+	if err := paintEngine.DrawPackedPixmap(top, splashScreen); err != nil {
+		log.Errorf("Failed to show splash screen: %v", err)
+	}
+	if err := paintEngine.End(); err != nil {
 		log.Errorf("Failed to show splash screen: %v", err)
 	}
 }
