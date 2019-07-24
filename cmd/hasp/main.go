@@ -259,12 +259,17 @@ func makeCharacter(opts options) *hasp.Character {
 			Dst:  "processing",
 		},
 		hasp.EventDesc{
+			Name: sound.StopEventName,
+			Src:  []string{"listens"},
+			Dst:  "idle",
+		},
+		hasp.EventDesc{
 			Name: haspaws.AwsRepliedEventName,
 			Src:  []string{"processing"},
 			Dst:  "tells-aws",
 		},
 		hasp.EventDesc{
-			Name: haspaws.StopEventName,
+			Name: sound.StopEventName,
 			Src:  []string{"processing"},
 			Dst:  "tells-bye",
 		},
@@ -307,7 +312,10 @@ func main() {
 		FullTimestamp:   true,
 		TimestampFormat: "2006-01-02T15:04:05.999",
 	})
-	os.Mkdir("./logs", 0777)
+	err := os.Mkdir("./logs", 0777)
+	if err != nil {
+		//ignore
+	}
 	f, err := os.OpenFile(fmt.Sprintf("./logs/start-%v.log", time.Now().Format("20060102150405")),
 		os.O_WRONLY | os.O_CREATE, 0755)
 	if err != nil {

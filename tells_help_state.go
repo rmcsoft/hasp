@@ -20,6 +20,7 @@ func NewTellsHelpState(availableAnimations []string, welcomeSpeech *sound.AudioD
 }
 
 func (s *tellsHelpState) Enter(ctx CharacterCtx, event events.Event) (events.EventSources, error) {
+
 	return nil, nil
 }
 

@@ -1,22 +1,21 @@
-package haspaws
+package sound
 
 import (
 	"errors"
 	"fmt"
 
 	"github.com/rmcsoft/hasp/events"
-	"github.com/rmcsoft/hasp/sound"
 )
 
 type StopEventData struct {
-	StopSpeach *sound.AudioData
+	StopSpeach *AudioData
 }
 
 const (
 	StopEventName = "Stop"
 )
 
-func NewStopEvent(stopSpeach *sound.AudioData) *events.Event {
+func NewStopEvent(stopSpeach *AudioData) *events.Event {
 	return &events.Event{
 		Name: StopEventName,
 		Args: []interface{}{

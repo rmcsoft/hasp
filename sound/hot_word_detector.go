@@ -364,10 +364,9 @@ import (
 )
 
 const (
-	recTime     int64   = int64(time.Duration(10) * time.Second)
-	sensitivity float32 = 0.5
-	startSilenceFramesMax = 140
-
+	recTime               int64   = int64(time.Duration(10) * time.Second)
+	sensitivity           float32 = 0.5
+	startSilenceFramesMax         = 140
 )
 
 // HotWordDetectorParams HotWordDetector params
@@ -394,18 +393,19 @@ type hotWordDetectorSession struct {
 
 // HotWordDetector Implements a hotword detector
 type HotWordDetector struct {
-	mutex          *sync.Mutex
-	detector       *C.Detector
-	sessionChan    chan *hotWordDetectorSession
-	currentSession *hotWordDetectorSession
-	originState    string
+	mutex             *sync.Mutex
+	detector          *C.Detector
+	sessionChan       chan *hotWordDetectorSession
+	currentSession    *hotWordDetectorSession
+	emptySoundCounter int
 }
 
 // NewHotWordDetector creates HotWordDetector
 func NewHotWordDetector(params HotWordDetectorParams) (*HotWordDetector, error) {
 	d := &HotWordDetector{
-		mutex:       &sync.Mutex{},
-		sessionChan: make(chan *hotWordDetectorSession),
+		mutex:             &sync.Mutex{},
+		sessionChan:       make(chan *hotWordDetectorSession),
+		emptySoundCounter: 0,
 	}
 
 	estr := &C.EStr{}
@@ -530,6 +530,7 @@ func (d *HotWordDetector) handleError(session *hotWordDetectorSession, op string
 func (d *HotWordDetector) doDetectHotWord(session *hotWordDetectorSession) {
 	buf, cptr, maxSampleCount := d.makeSampleBuf()
 	estr := &C.EStr{}
+	d.emptySoundCounter = 0
 	sampleCount := C.detect(d.detector, cptr, C.int(maxSampleCount), estr)
 	if sampleCount < 0 {
 		d.handleError(session, "HotWordDetect", estr)
@@ -550,9 +551,15 @@ func (d *HotWordDetector) doSoundCapture(session *hotWordDetectorSession) {
 
 	samples := buf[0:sampleCount]
 	if len(samples) > 0 {
+		d.emptySoundCounter = 0
 		session.eventChan <- NewSoundCapturedEvent(d.makeAudioData(buf, sampleCount))
 	} else {
-		session.eventChan <- NewSoundEmptyEvent()
+		d.emptySoundCounter++
+		if d.emptySoundCounter > 2 {
+			session.eventChan <- NewStopEvent(nil)
+		} else {
+			session.eventChan <- NewSoundEmptyEvent()
+		}
 	}
 }
 

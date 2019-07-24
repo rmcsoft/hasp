@@ -106,7 +106,7 @@ func (h *awsLexRuntime) gotReply(replaiedSpeech *sound.AudioData) {
 }
 
 func (h *awsLexRuntime) gotStop(replaiedSpeech *sound.AudioData) {
-	h.eventChan <- NewStopEvent(replaiedSpeech)
+	h.eventChan <- sound.NewStopEvent(replaiedSpeech)
 }
 
 func (h *awsLexRuntime) makeInputStream() io.ReadSeeker {

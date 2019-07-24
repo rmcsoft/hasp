@@ -1,7 +1,6 @@
 package hasp
 
 import (
-	"github.com/rmcsoft/hasp/haspaws"
 	"github.com/rmcsoft/hasp/sound"
 
 	"github.com/rmcsoft/hasp/events"
@@ -22,7 +21,7 @@ func NewTellsByeState(availableAnimations []string) State {
 func (s *tellsByeState) Enter(ctx CharacterCtx, event events.Event) (events.EventSources, error) {
 	s.byeSpeech = nil
 	if len(event.Args) > 0 {
-		data, _ := haspaws.GetStopEventData(&event)
+		data, _ := sound.GetStopEventData(&event)
 		s.byeSpeech = data.StopSpeach
 	}
 
