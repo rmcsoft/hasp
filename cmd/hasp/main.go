@@ -299,6 +299,10 @@ func makeCharacter(opts options) *hasp.Character {
 		log.Fatal(err)
 	}
 
+	if opts.Debug || opts.Trace {
+		character.SetDebug(true)
+	}
+
 	if opts.VisualizeFSM {
 		graphviz := character.Visualize()
 		ioutil.WriteFile("character.dot", []byte(graphviz), 0644)

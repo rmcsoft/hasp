@@ -97,6 +97,10 @@ func (c *Character) Visualize() string {
 	return fsm.Visualize(c.fsm)
 }
 
+func (c *Character) SetDebug(val bool) {
+	c.ctx["Debug"] = val
+}
+
 func isNoTransitionError(err error) bool {
 	_, ok := err.(fsm.NoTransitionError)
 	return ok

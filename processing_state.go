@@ -31,7 +31,8 @@ func (s *processingState) Enter(ctx CharacterCtx, event events.Event) (events.Ev
 		ctx[CtxUserId] = u.String()
 		userId = ctx[CtxUserId]
 	}
-	lexResponseSource, err := haspaws.NewLexEventSource(s.lrs, data.AudioData, userId.(string))
+	ifDebug, ok := ctx["Debug"]
+	lexResponseSource, err := haspaws.NewLexEventSource(s.lrs, data.AudioData, userId.(string), ok && ifDebug.(bool))
 	if err != nil {
 		panic(err)
 	}
