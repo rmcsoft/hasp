@@ -93,7 +93,8 @@ func (h *awsLexRuntime) run() {
 	}
 	repliedSpeech := sound.NewAudioData(h.repliedAudioFormat, samples)
 
-	if resp.IntentName != nil && *resp.IntentName == "StopInteraction" {
+	if resp.IntentName != nil &&
+		(*resp.IntentName == "StopInteraction" || *resp.IntentName == "NoThankYou") {
 		h.gotStop(repliedSpeech)
 	} else {
 		h.gotReply(repliedSpeech)
