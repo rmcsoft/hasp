@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"image"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -42,6 +43,8 @@ type options struct {
 	SplashScreenPath string `long:"splash-screen" description:"Image for splash screen (ppixmap format)"`
 
 	Config func(s string) error `long:"config" no-ini:"true"`
+	Debug bool `long:"debug" description:"debug information in log outputs"`
+	Trace bool `long:"trace" description:"trace-level debugging in log outputs"`
 }
 
 type logrusProxy struct {
@@ -304,12 +307,24 @@ func main() {
 		FullTimestamp:   true,
 		TimestampFormat: "2006-01-02T15:04:05.999",
 	})
-	// log.SetLevel(log.DebugLevel)
+	os.Mkdir("./logs", 0777)
+	f, err := os.OpenFile(fmt.Sprintf("./logs/start-%v.log", time.Now().Format("20060102150405")),
+		os.O_WRONLY | os.O_CREATE, 0755)
+	if err != nil {
+		log.Fatal(err)
+	}
+	mw := io.MultiWriter(os.Stdout, f)
+	log.SetOutput(mw)
 
 	opts := parseOpts()
+	if opts.Trace {
+		log.SetLevel(log.TraceLevel)
+	} else if opts.Debug {
+		log.SetLevel(log.DebugLevel)
+	}
 
 	character := makeCharacter(opts)
-	err := character.Run()
+	err = character.Run()
 	if err != nil {
 		log.Fatal(err)
 	}
