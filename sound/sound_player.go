@@ -87,7 +87,9 @@ static bool playback(snd_pcm_t* handle, const int16_t* buf, int bufSize, EStr* e
         return false;
 	}
 
+	snd_pcm_nonblock(handle, 0);
     snd_pcm_drain(handle);
+	snd_pcm_nonblock(handle, 1);
 	return true;
 }
 */
@@ -148,7 +150,7 @@ func (p *SoundPlayer) Play(audioData *AudioData) (events.EventSource, error) {
 		sampleCount := audioData.SampleCount()
 		if sampleCount == 0 {
 			log.Info("SoundPlayer: NothingToPlay")
-			p.closeDev()
+			p.closeDev(false)
 			return &events.Event{Name: SoundPlayedEventName}
 		}
 		samples := audioData.Samples()
@@ -160,13 +162,47 @@ func (p *SoundPlayer) Play(audioData *AudioData) (events.EventSource, error) {
 			err := fmt.Errorf("Playback failed: %v", estr)
 			log.Errorf("HotWordDetector: %v", err)
 		}
-		p.closeDev()
+		p.closeDev(false)
 		log.Info("SoundPlayer: StopPlay")
 
 		return &events.Event{Name: SoundPlayedEventName}
 	}
 
 	return events.NewSingleEventSource("SoundPlayerEventSource", asyncPlay), nil
+}
+
+// Play Sync plays back buffer
+func (p *SoundPlayer) PlaySync(audioData *AudioData) {
+	p.devMutex.Lock()
+	defer p.devMutex.Unlock()
+
+	p.stop(false)
+
+	if audioData.SampleType() != S16LE || audioData.ChannelCount() != 1 {
+		return
+	}
+
+	estr := &C.EStr{}
+	p.dev = C.openDevice(C.CString(p.devName), C.uint(audioData.SampleRate()), estr)
+	if p.dev == nil {
+		fmt.Errorf("Could't open audio device for playback: %v", estr)
+		return
+	}
+
+	sampleCount := audioData.SampleCount()
+	if sampleCount == 0 {
+		log.Info("SoundPlayer: NothingToPlay")
+		p.closeDev(false)
+		return
+	}
+	samples := audioData.Samples()
+
+	cptr := (*C.int16_t)(unsafe.Pointer(&samples[0]))
+	if !C.playback(p.dev, cptr, C.int(sampleCount), estr) {
+		err := fmt.Errorf("Playback failed: %v", estr)
+		log.Errorf("SoundPlayer: %v", err)
+	}
+	p.closeDev(false)
 }
 
 // Stop playing
@@ -191,12 +227,14 @@ func (p *SoundPlayer) stop(useLock bool) {
 	}
 }
 
-func (p *SoundPlayer) closeDev() {
-	p.devMutex.Lock()
+func (p *SoundPlayer) closeDev(useLock bool) {
+	if useLock {
+		p.devMutex.Lock()
+		defer p.devMutex.Unlock()
+	}
 	if p.dev != nil {
 		C.snd_pcm_close(p.dev)
 		p.dev = nil
 	}
 	p.devClosedCond.Signal()
-	p.devMutex.Unlock()
 }

@@ -142,7 +142,7 @@ func (h *awsLexRuntime) run() {
 	case "Hell":
 		log.Debug("stopping...")
 		h.gotStop(nil)
-	case "AxeOso", "Catawba", "Chatter", "Codescape", "Delivery", "DontKnowTheLastName", "Event", "Goodbye", "NoNameDelivery", "ThankYou", "TourSubscription", "TradeLore":
+	case "AxeOso", "Catawba", "Codescape", "Delivery", "DontKnowTheLastName", "Event", "Goodbye", "NoNameDelivery", "ThankYou", "TourSubscription", "TradeLore":
 		if dialogState == "Fulfilled" {
 			log.Debug("stopping...")
 			h.gotStop(repliedSpeech)
@@ -150,7 +150,7 @@ func (h *awsLexRuntime) run() {
 			log.Debug("reply...")
 			h.gotReply(repliedSpeech)
 		}
-	case "ContactAdvent", "HowCanIhelpYou", "Meeting", "NoNameMeeting", "RepeatPhoneNumber", "SmthUnclear", "Mistake", "WebsitePhoneNumber", "WhatIsYourName":
+	case "ContactAdvent", "HowCanIhelpYou", "Chatter", "Meeting", "NoNameMeeting", "RepeatPhoneNumber", "SmthUnclear", "Mistake", "WebsitePhoneNumber", "WhatIsYourName":
 		log.Debug("reply...")
 		h.gotReply(repliedSpeech)
 	default:

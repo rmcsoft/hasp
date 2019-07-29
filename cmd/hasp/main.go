@@ -170,6 +170,7 @@ func makeHotWordDetector(opts options) *sound.HotWordDetector {
 		CaptureDeviceName: opts.CaptureDevice,
 		KeywordPath:       opts.KeywordPath,
 		ModelPath:         opts.ModelParamPath,
+		DebugSound:        opts.Trace,
 	}
 
 	hotWordDetector, err := sound.NewHotWordDetector(params)
@@ -208,6 +209,7 @@ func makeCharacter(opts options) *hasp.Character {
 
 	awsSess := makeAwsSession(opts)
 	svc := lexruntimeservice.New(awsSess)
+	soundPlayer := makeSoundPlayer(opts)
 	hotWordDetector := makeHotWordDetector(opts)
 
 	states := hasp.States{
@@ -237,6 +239,9 @@ func makeCharacter(opts options) *hasp.Character {
 		"listens": hasp.NewListensState(
 			[]string{"silent"},
 			hotWordDetector,
+			soundPlayer,
+			loadAudioData("../wavs/bing-bong.wav"),
+			loadAudioData("../wavs/bong-bing.wav"),
 		),
 		"processing": hasp.NewProcessingState(
 			//[]string{"SMS"},
@@ -309,7 +314,6 @@ func makeCharacter(opts options) *hasp.Character {
 	eventSources := events.EventSources{}
 
 	animator := makeAnimator(opts)
-	soundPlayer := makeSoundPlayer(opts)
 	character, err := hasp.NewCharacter("idle", states, eventDescs, eventSources, animator, soundPlayer)
 	if err != nil {
 		log.Fatal(err)
