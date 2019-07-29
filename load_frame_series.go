@@ -19,7 +19,7 @@ func loadFrames(path string) ([]chanim.Frame, error) {
 
 	frames := make([]chanim.Frame, 0, len(ppixmapFiles))
 	for _, ppixmapFile := range ppixmapFiles {
-		logrus.Debugf("Loading frame from %v", ppixmapFile)
+		logrus.Tracef("Loading frame from %v", ppixmapFile)
 		ppixmap, err := chanim.MMapPackedPixmap(ppixmapFile)
 		if err != nil {
 			return nil, err

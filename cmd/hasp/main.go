@@ -13,6 +13,7 @@ import (
 
 	"github.com/rmcsoft/chanim"
 	"github.com/rmcsoft/hasp"
+	atmel "github.com/rmcsoft/hasp/atmel/periph_gpio"
 	"github.com/rmcsoft/hasp/events"
 	"github.com/rmcsoft/hasp/haspaws"
 	"github.com/rmcsoft/hasp/sound"
@@ -29,22 +30,27 @@ const (
 )
 
 type options struct {
-	PackedImageDir string `short:"i" long:"image-dir" description:"Packed image directory needed for animation" required:"true"`
-	UseSDL         bool   `short:"s" long:"use-sdl"   description:"Render with sdl"`
-	CaptureDevice  string `short:"c" long:"capture-dev" default:"hw:0" description:"Sound capture device name"`
-	PlayDevice     string `short:"p" long:"play-dev"    default:"mono" description:"Sound play device name"`
-	ModelParamPath string `short:"m" long:"model-param" description:"Path to file containing model parameters" required:"true"`
-	KeywordPath    string `short:"k" long:"keyword"     description:"Path to keyword file" required:"true"`
-	AwsID          string `short:"a" long:"aws-id"     description:"AWS ID" required:"true"`
-	AwsSecret      string `short:"w" long:"aws-secret" description:"AWS key" required:"true"`
+	PackedImageDir  string `short:"i" long:"image-dir"   description:"Packed image directory needed for animation" required:"true"`
+	UseSDL          bool   `short:"s" long:"use-sdl"     description:"Render with sdl"`
+	CaptureDevice   string `short:"c" long:"capture-dev" default:"hw:0" description:"Sound capture device name"`
+	PlayDevice      string `short:"p" long:"play-dev"    default:"mono" description:"Sound play device name"`
+	ModelParamPath  string `short:"m" long:"model-param" description:"Path to file containing model parameters" required:"true"`
+	KeywordPath     string `short:"k" long:"keyword"     description:"Path to keyword file" required:"true"`
+	LeftSensorPin   int    `long:"left-pin"              description:"Left sensor pin" required:"true"`
+	LeftSensorPort  string `long:"left-port"             description:"Left sensor port" required:"true"`
+	RightSensorPin  int    `long:"right-pin"             description:"Right sensor pin" required:"true"`
+	RightSensorPort string `long:"right-port"            description:"Right sensor port" required:"true"`
+	AwsID           string `short:"a" long:"aws-id"      description:"AWS ID" required:"true"`
+	AwsSecret       string `short:"w" long:"aws-secret"  description:"AWS key" required:"true"`
+
+	Debug bool `long:"debug" description:"debug information in log outputs"`
+	Trace bool `long:"trace" description:"trace-level debugging in log outputs"`
 
 	VisualizeFSM bool `long:"visualize-fsm" description:"Visualize character FSM in Graphviz format (file character.dot)"`
 
 	SplashScreenPath string `long:"splash-screen" description:"Image for splash screen (ppixmap format)"`
 
 	Config func(s string) error `long:"config" no-ini:"true"`
-	Debug bool `long:"debug" description:"debug information in log outputs"`
-	Trace bool `long:"trace" description:"trace-level debugging in log outputs"`
 }
 
 type logrusProxy struct {
@@ -209,6 +215,10 @@ func makeCharacter(opts options) *hasp.Character {
 			[]string{"lotus", "reading", "giggles", "reading"},
 			time.Duration(2)*time.Minute,
 			hotWordDetector,
+			atmel.AtmelGpioPins{
+				atmel.AtmelGpioPin{Number: opts.LeftSensorPin, Name: opts.LeftSensorPort},
+				atmel.AtmelGpioPin{Number: opts.RightSensorPin, Name: opts.RightSensorPort},
+			},
 		),
 		"tells-help": hasp.NewTellsHelpState(
 			[]string{"tells"},
@@ -229,7 +239,8 @@ func makeCharacter(opts options) *hasp.Character {
 			hotWordDetector,
 		),
 		"processing": hasp.NewProcessingState(
-			[]string{"SMS"},
+			//[]string{"SMS"},
+			[]string{"silent"},
 			svc,
 		),
 		"goodbye": hasp.NewSingleAniState(
@@ -240,6 +251,11 @@ func makeCharacter(opts options) *hasp.Character {
 	eventDescs := hasp.EventDescs{
 		hasp.EventDesc{
 			Name: sound.HotWordDetectedEventName,
+			Src:  []string{"idle"},
+			Dst:  "tells-help",
+		},
+		hasp.EventDesc{
+			Name: events.GpioEventName,
 			Src:  []string{"idle"},
 			Dst:  "tells-help",
 		},
@@ -321,7 +337,7 @@ func main() {
 		//ignore
 	}
 	f, err := os.OpenFile(fmt.Sprintf("./logs/start-%v.log", time.Now().Format("20060102150405")),
-		os.O_WRONLY | os.O_CREATE, 0755)
+		os.O_WRONLY|os.O_CREATE, 0755)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -330,6 +346,7 @@ func main() {
 
 	opts := parseOpts()
 	if opts.Trace {
+		log.Info("Tracing enabled!")
 		log.SetLevel(log.TraceLevel)
 	} else if opts.Debug {
 		log.SetLevel(log.DebugLevel)

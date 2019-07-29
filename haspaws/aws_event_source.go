@@ -54,7 +54,7 @@ func (h *awsLexRuntime) Events() chan *events.Event {
 func (h *awsLexRuntime) Close() {
 }
 
-func (h *awsLexRuntime) sendRequest() ([]byte, string, error) {
+func (h *awsLexRuntime) sendRequest() ([]byte, string, string, error) {
 	req, resp := h.lrs.PostContentRequest(&lexruntimeservice.PostContentInput{
 		BotAlias:    aws.String("Prod"),
 		BotName:     aws.String("HASPBot"),
@@ -70,7 +70,7 @@ func (h *awsLexRuntime) sendRequest() ([]byte, string, error) {
 	if err != nil {
 		log.Errorf("Failed to send request to runtime.lex: %v", err)
 
-		return nil, "Error", fmt.Errorf("Failed to send request to runtime.lex: %v", err)
+		return nil, "Error", "Error", fmt.Errorf("Failed to send request to runtime.lex: %v", err)
 	}
 
 	log.Trace("Response runtime.lex: %v", resp)
@@ -83,13 +83,13 @@ func (h *awsLexRuntime) sendRequest() ([]byte, string, error) {
 
 	if resp.AudioStream == nil {
 		log.Errorf("Response from runtime.lex does not contain AudioStream")
-		return nil, "Error", fmt.Errorf("Response from runtime.lex does not contain AudioStream")
+		return nil, "Error", "Error", fmt.Errorf("Response from runtime.lex does not contain AudioStream")
 	}
 
 	samples, err := ioutil.ReadAll(resp.AudioStream)
 	if err != nil || len(samples) == 0 {
 		log.Errorf("Unable to read audio data from the runtime.lex response")
-		return nil, "Error", fmt.Errorf("Unable to read audio data from the runtime.lex response")
+		return nil, "Error", "Error", fmt.Errorf("Unable to read audio data from the runtime.lex response")
 	}
 
 	if h.debug {
@@ -104,21 +104,26 @@ func (h *awsLexRuntime) sendRequest() ([]byte, string, error) {
 		intentName = *resp.IntentName
 	}
 
-	return samples, intentName, err
+	dialogState := "Error"
+	if resp.DialogState != nil {
+		dialogState = *resp.DialogState
+	}
+
+	return samples, intentName, dialogState, err
 }
 
 func (h *awsLexRuntime) run() {
 	defer close(h.eventChan)
 
-	samples, intentName, err := h.sendRequest()
+	samples, intentName, dialogState, err := h.sendRequest()
 	if err != nil {
 		// NOT-A-FIX! This workaround is here just to understand the problem better!
 		log.Info(" ===>>> Error appeared communicating with AWS! RETRYING!!!!!!")
-		samples, intentName, err = h.sendRequest()
+		samples, intentName, dialogState, err = h.sendRequest()
 		if err != nil {
 			// NOT-A-FIX! This workaround is here just to understand the problem better!
 			log.Info(" ===>>> Error appeared AGAIN communicating with AWS! RETRYING ONCE AGAIN!!!!!!")
-			samples, intentName, err = h.sendRequest()
+			samples, intentName, dialogState, err = h.sendRequest()
 			if err != nil {
 				log.Error(" ===>>> 3 errors already!!! Giving up")
 				h.gotStop(nil) // TODO: Reaction to an error
@@ -128,20 +133,38 @@ func (h *awsLexRuntime) run() {
 	}
 	repliedSpeech := sound.NewAudioData(h.repliedAudioFormat, samples)
 
+	log.Debug("GOT: Intent=", intentName, "; State=", dialogState)
+
 	switch intentName {
 	case "StopInteraction", "NoThankYou":
+		log.Debug("stopping...")
 		h.gotStop(repliedSpeech)
+	case "Hell":
+		log.Debug("stopping...")
+		h.gotStop(nil)
+	case "AxeOso", "Catawba", "Chatter", "Codescape", "Delivery", "DontKnowTheLastName", "Event", "Goodbye", "NoNameDelivery", "ThankYou", "TourSubscription", "TradeLore":
+		if dialogState == "Fulfilled" {
+			log.Debug("stopping...")
+			h.gotStop(repliedSpeech)
+		} else {
+			log.Debug("reply...")
+			h.gotReply(repliedSpeech)
+		}
+	case "ContactAdvent", "HowCanIhelpYou", "Meeting", "NoNameMeeting", "RepeatPhoneNumber", "SmthUnclear", "Mistake", "WebsitePhoneNumber", "WhatIsYourName":
+		log.Debug("reply...")
+		h.gotReply(repliedSpeech)
 	default:
+		log.Debug("reply...")
 		h.gotReply(repliedSpeech)
 	}
 }
 
-func (h *awsLexRuntime) gotReply(replaiedSpeech *sound.AudioData) {
-	h.eventChan <- NewAwsRepliedEvent(replaiedSpeech)
+func (h *awsLexRuntime) gotReply(repliedSpeech *sound.AudioData) {
+	h.eventChan <- NewAwsRepliedEvent(repliedSpeech)
 }
 
-func (h *awsLexRuntime) gotStop(replaiedSpeech *sound.AudioData) {
-	h.eventChan <- sound.NewStopEvent(replaiedSpeech)
+func (h *awsLexRuntime) gotStop(repliedSpeech *sound.AudioData) {
+	h.eventChan <- sound.NewStopEvent(repliedSpeech)
 }
 
 func (h *awsLexRuntime) makeInputStream() io.ReadSeeker {
