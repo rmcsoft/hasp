@@ -14,6 +14,9 @@ type AwsRepliedEventData struct {
 
 const (
 	AwsRepliedEventName = "AwsReplied"
+	AwsRepliedCallEventName = "AwsRepliedCall"
+	AwsRepliedTypeEventName = "AwsRepliedType"
+
 )
 
 // NewAwsRepliedEvent creates RepliedEvent
@@ -26,9 +29,20 @@ func NewAwsRepliedEvent(repliedSpeech *sound.AudioData) *events.Event {
 	}
 }
 
+func NewAwsRepliedEventState(repliedSpeech *sound.AudioData, name string) *events.Event {
+	return &events.Event{
+		Name: name,
+		Args: []interface{}{
+			AwsRepliedEventData{repliedSpeech},
+		},
+	}
+}
+
 // GetAwsRepliedEventData gets AwsRepliedEvent data
 func GetAwsRepliedEventData(event *events.Event) (AwsRepliedEventData, error) {
-	if event.Name != AwsRepliedEventName {
+	if event.Name != AwsRepliedEventName &&
+		event.Name != AwsRepliedCallEventName &&
+		event.Name != AwsRepliedTypeEventName {
 		return AwsRepliedEventData{},
 			fmt.Errorf("The event must be named %s", AwsRepliedEventName)
 	}

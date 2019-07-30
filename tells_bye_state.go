@@ -1,6 +1,7 @@
 package hasp
 
 import (
+	"github.com/rmcsoft/hasp/haspaws"
 	"github.com/rmcsoft/hasp/sound"
 
 	"github.com/rmcsoft/hasp/events"
@@ -21,8 +22,13 @@ func NewTellsByeState(availableAnimations []string) State {
 func (s *tellsByeState) Enter(ctx CharacterCtx, event events.Event) (events.EventSources, error) {
 	s.byeSpeech = nil
 	if len(event.Args) > 0 {
-		data, _ := sound.GetStopEventData(&event)
-		s.byeSpeech = data.StopSpeach
+		if event.Name == sound.StopEventName {
+			data, _ := sound.GetStopEventData(&event)
+			s.byeSpeech = data.StopSpeach
+		} else if event.Name == haspaws.AwsRepliedCallEventName {
+			data, _ := haspaws.GetAwsRepliedEventData(&event)
+			s.byeSpeech = data.RepliedSpeech
+		}
 	}
 
 	if s.byeSpeech == nil {

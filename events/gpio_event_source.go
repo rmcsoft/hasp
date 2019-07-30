@@ -16,7 +16,7 @@ type gpioEventSource struct {
 	sensorsPins []gpio.PinIO
 }
 
-func checkAllPins(sensorsPins []gpio.PinIO) bool {
+func CheckAllPins(sensorsPins []gpio.PinIO) bool {
 	for _, pin := range sensorsPins {
 		val := pin.Read()
 		if val == gpio.Low {
@@ -60,7 +60,7 @@ func (es *gpioEventSource) run() {
 
 	t := time.NewTicker(500 * time.Millisecond)
 	for {
-		if checkAllPins(es.sensorsPins) {
+		if CheckAllPins(es.sensorsPins) {
 			es.eventChan <- &Event{Name: GpioEventName}
 			return
 		}

@@ -14,6 +14,8 @@ type Event struct {
 // need to update the animation and sound without naming the current state
 const StateChangedEventName = "StateChanged"
 const StateGoIdleName = "GoIdle"
+const StateWaitTimeoutName = "WaitTimeout"
+const StateFullHelpName = "FullHelp"
 
 // IDEventSource type to identify event sources
 type IDEventSource = uint64

@@ -32,25 +32,30 @@ func atmelLoaded(state *periph.State) bool {
 	return false
 }
 
+var isAtmelDriverLoaded = false
+
 func loadAtmelPeriph(sensorsPins atmel.AtmelGpioPins) []gpio.PinIO {
-	if err := periph.Register(atmel.AtmelGpioDriver{
-		Pins: sensorsPins,
-	}); err != nil {
-		logrus.Error(err)
-		logrus.Info("Will not use GPIO sensors detection")
-		return nil
-	}
+	if !isAtmelDriverLoaded {
+		if err := periph.Register(atmel.AtmelGpioDriver{
+			Pins: sensorsPins,
+		}); err != nil {
+			logrus.Error(err)
+			logrus.Info("Will not use GPIO sensors detection")
+			return nil
+		}
 
-	// Initialize normally. Your driver will be loaded:
-	state, err := host.Init()
-	if err != nil {
-		logrus.Error(err)
-		return nil
-	}
+		// Initialize normally. Your driver will be loaded:
+		state, err := host.Init()
+		if err != nil {
+			logrus.Error(err)
+			return nil
+		}
 
-	if !atmelLoaded(state) {
-		logrus.Info("Will not use GPIO sensors detection")
-		return nil
+		if !atmelLoaded(state) {
+			logrus.Info("Will not use GPIO sensors detection")
+			return nil
+		}
+		isAtmelDriverLoaded = true
 	}
 
 	atmelPins := make([]gpio.PinIO, len(sensorsPins))
@@ -59,7 +64,7 @@ func loadAtmelPeriph(sensorsPins atmel.AtmelGpioPins) []gpio.PinIO {
 		if atmelPins[i] == nil {
 			logrus.Error("Failed to open pin ", sensorsPins[i].Name)
 		} else {
-			err = atmelPins[i].In(gpio.PullNoChange, gpio.NoEdge)
+			err := atmelPins[i].In(gpio.PullNoChange, gpio.NoEdge)
 			if err != nil {
 				logrus.Error(err)
 			} else {

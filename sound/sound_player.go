@@ -173,6 +173,10 @@ func (p *SoundPlayer) Play(audioData *AudioData) (events.EventSource, error) {
 
 // Play Sync plays back buffer
 func (p *SoundPlayer) PlaySync(audioData *AudioData) {
+	if audioData == nil {
+		return
+	}
+
 	p.devMutex.Lock()
 	defer p.devMutex.Unlock()
 

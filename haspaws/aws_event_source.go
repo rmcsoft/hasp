@@ -142,7 +142,7 @@ func (h *awsLexRuntime) run() {
 	case "Hell":
 		log.Debug("stopping...")
 		h.gotStop(nil)
-	case "AxeOso", "Catawba", "Codescape", "Delivery", "DontKnowTheLastName", "Event", "Goodbye", "NoNameDelivery", "ThankYou", "TourSubscription", "TradeLore":
+	case "AxeOso", "Catawba", "Codescape", "DontKnowTheLastName", "Event", "Goodbye", "ThankYou", "TourSubscription", "TradeLore":
 		if dialogState == "Fulfilled" {
 			log.Debug("stopping...")
 			h.gotStop(repliedSpeech)
@@ -150,21 +150,41 @@ func (h *awsLexRuntime) run() {
 			log.Debug("reply...")
 			h.gotReply(repliedSpeech)
 		}
-	case "ContactAdvent", "HowCanIhelpYou", "Chatter", "Meeting", "NoNameMeeting", "RepeatPhoneNumber", "SmthUnclear", "Mistake", "WebsitePhoneNumber", "WhatIsYourName":
+	case "ContactAdvent", "HowCanIhelpYou", "Delivery", "Chatter", "NoNameMeeting", "NoNameDelivery", "RepeatPhoneNumber", "SmthUnclear", "Mistake", "WebsitePhoneNumber", "WhatIsYourName":
 		log.Debug("reply...")
 		h.gotReply(repliedSpeech)
+
+	case "Meeting":
+		if dialogState == "ConfirmIntent" {
+			log.Debug("meeting confirmation...")
+			h.gotConfirmation(repliedSpeech)
+		} else if dialogState == "Fulfilled" {
+			log.Debug("meeting fullfilled...")
+			h.gotCall(repliedSpeech)
+		} else {
+			log.Debug("reply...")
+			h.gotReply(repliedSpeech)
+		}
 	default:
 		log.Debug("reply...")
 		h.gotReply(repliedSpeech)
 	}
 }
 
-func (h *awsLexRuntime) gotReply(repliedSpeech *sound.AudioData) {
-	h.eventChan <- NewAwsRepliedEvent(repliedSpeech)
+func (h *awsLexRuntime) gotReply(data *sound.AudioData) {
+	h.eventChan <- NewAwsRepliedEvent(data)
 }
 
 func (h *awsLexRuntime) gotStop(repliedSpeech *sound.AudioData) {
 	h.eventChan <- sound.NewStopEvent(repliedSpeech)
+}
+
+func (h *awsLexRuntime) gotCall(data *sound.AudioData) {
+	h.eventChan <- NewAwsRepliedEventState(data, AwsRepliedCallEventName)
+}
+
+func (h *awsLexRuntime) gotConfirmation(data *sound.AudioData) {
+	h.eventChan <- NewAwsRepliedEventState(data, AwsRepliedTypeEventName)
 }
 
 func (h *awsLexRuntime) makeInputStream() io.ReadSeeker {

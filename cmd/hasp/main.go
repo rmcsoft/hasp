@@ -212,6 +212,9 @@ func makeCharacter(opts options) *hasp.Character {
 	soundPlayer := makeSoundPlayer(opts)
 	hotWordDetector := makeHotWordDetector(opts)
 
+	inSound := loadAudioData("../wavs/bing-bong.wav")
+	outSound := loadAudioData("../wavs/bong-bing.wav")
+
 	states := hasp.States{
 		"idle": hasp.NewIdleState(
 			[]string{"lotus", "reading", "giggles", "reading"},
@@ -221,6 +224,19 @@ func makeCharacter(opts options) *hasp.Character {
 				atmel.AtmelGpioPin{Number: opts.LeftSensorPin, Name: opts.LeftSensorPort},
 				atmel.AtmelGpioPin{Number: opts.RightSensorPin, Name: opts.RightSensorPort},
 			},
+		),
+		"sensor-triggered": hasp.NewTriggeredState(
+			"silent",
+			hotWordDetector,
+			atmel.AtmelGpioPins{
+				atmel.AtmelGpioPin{Number: opts.LeftSensorPin, Name: opts.LeftSensorPort},
+				atmel.AtmelGpioPin{Number: opts.RightSensorPin, Name: opts.RightSensorPort},
+			},
+			10 * time.Second,
+		),
+		"tells-fullhelp": hasp.NewTellsHelpState(
+			[]string{"tells"},
+			loadAudioData("../wavs/fullhelp.wav"),
 		),
 		"tells-help": hasp.NewTellsHelpState(
 			[]string{"tells"},
@@ -240,16 +256,29 @@ func makeCharacter(opts options) *hasp.Character {
 			[]string{"silent"},
 			hotWordDetector,
 			soundPlayer,
-			loadAudioData("../wavs/bing-bong.wav"),
-			loadAudioData("../wavs/bong-bing.wav"),
+			inSound,
+			outSound,
 		),
 		"processing": hasp.NewProcessingState(
-			//[]string{"SMS"},
 			[]string{"silent"},
 			svc,
 		),
 		"goodbye": hasp.NewSingleAniState(
 			"goodbye",
+		),
+		"call": hasp.NewProcessingState(
+			[]string{"calls2"},
+			svc,
+		),
+		"tell-type": hasp.NewTellsState(
+			[]string{"tells"},
+		),
+		"type": hasp.NewListensState(
+			[]string{"SMS"},
+			hotWordDetector,
+			soundPlayer,
+			inSound,
+			outSound,
 		),
 	}
 
@@ -260,18 +289,40 @@ func makeCharacter(opts options) *hasp.Character {
 			Dst:  "tells-help",
 		},
 		hasp.EventDesc{
-			Name: events.GpioEventName,
-			Src:  []string{"idle"},
-			Dst:  "tells-help",
-		},
-		hasp.EventDesc{
 			Name: sound.HotWordWithDataDetectedEventName,
 			Src:  []string{"idle"},
 			Dst:  "processing",
 		},
 		hasp.EventDesc{
+			Name: events.GpioEventName,
+			Src:  []string{"idle"},
+			Dst:  "sensor-triggered",
+		},
+		hasp.EventDesc{
+			Name: events.StateWaitTimeoutName,
+			Src:  []string{"sensor-triggered"},
+			Dst:  "idle",
+		},
+		hasp.EventDesc{
+			Name: events.StateFullHelpName,
+			Src:  []string{"sensor-triggered"},
+			Dst:  "tells-fullhelp",
+		},
+		hasp.EventDesc{
+			Name: sound.HotWordDetectedEventName,
+			Src:  []string{"sensor-triggered"},
+			Dst:  "tells-help",
+		},
+		hasp.EventDesc{
+			Name: sound.HotWordWithDataDetectedEventName,
+			Src:  []string{"sensor-triggered"},
+			Dst:  "processing",
+		},
+
+
+		hasp.EventDesc{
 			Name: sound.SoundPlayedEventName,
-			Src:  []string{"tells-help", "tells-aws", "tells-there"},
+			Src:  []string{"tells-help", "tells-aws", "tells-there", "tells-fullhelp" },
 			Dst:  "listens",
 		},
 		hasp.EventDesc{
@@ -290,9 +341,39 @@ func makeCharacter(opts options) *hasp.Character {
 			Dst:  "tells-aws",
 		},
 		hasp.EventDesc{
+			Name: haspaws.AwsRepliedEventName,
+			Src:  []string{"call"},
+			Dst:  "tells-aws",
+		},
+		hasp.EventDesc{
+			Name: haspaws.AwsRepliedTypeEventName,
+			Src:  []string{"processing"},
+			Dst:  "tell-type",
+		},
+		hasp.EventDesc{
+			Name: sound.SoundCapturedEventName,
+			Src:  []string{"type"},
+			Dst:  "call",
+		},
+		hasp.EventDesc{
+			Name: haspaws.AwsRepliedCallEventName,
+			Src:  []string{"call"},
+			Dst:  "tells-bye",
+		},
+		hasp.EventDesc{
+			Name: haspaws.AwsRepliedTypeEventName,
+			Src:  []string{"call"},
+			Dst:  "tell-type",
+		},
+		hasp.EventDesc{
 			Name: sound.StopEventName,
 			Src:  []string{"processing"},
 			Dst:  "tells-bye",
+		},
+		hasp.EventDesc{
+			Name: sound.SoundPlayedEventName,
+			Src:  []string{"tell-type"},
+			Dst:  "type",
 		},
 		hasp.EventDesc{
 			Name: sound.SoundPlayedEventName,
@@ -307,6 +388,11 @@ func makeCharacter(opts options) *hasp.Character {
 		hasp.EventDesc{
 			Name: sound.SoundEmptyEventName,
 			Src:  []string{"listens"},
+			Dst:  "tells-there",
+		},
+		hasp.EventDesc{
+			Name: sound.SoundEmptyEventName,
+			Src:  []string{"type"},
 			Dst:  "tells-there",
 		},
 	}
