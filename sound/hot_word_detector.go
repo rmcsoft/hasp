@@ -201,7 +201,7 @@ static int readSamples(Detector* d, int16_t* buf, int maxSampleCount, EStr* estr
        return -EINTR;
 }
 
-#define NOISE_THRESHOLD 10000
+#define NOISE_THRESHOLD 13000
 #define NOISE_FRAMES 50
 
 static short getMaxLoud(const int16_t* samples, int sampleCount) {
@@ -354,9 +354,9 @@ import (
 )
 
 const (
-	recTime               int64   = int64(time.Duration(10) * time.Second)
-	sensitivity           float32 = 0.5
-	startSilenceFramesMax         = 140
+	recTime               = int64(time.Duration(10) * time.Second)
+	sensitivity           = 0.3
+	startSilenceFramesMax = 140
 )
 
 // HotWordDetectorParams HotWordDetector params
@@ -488,7 +488,7 @@ func (d *HotWordDetector) runSession(session *hotWordDetectorSession) {
 		return
 	}
 
-	for session.notStopped() {
+	/*for session.notStopped() */{
 		switch session.mode {
 		case detectHotWordMode:
 			d.doDetectHotWord(session)

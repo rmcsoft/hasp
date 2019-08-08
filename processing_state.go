@@ -1,7 +1,7 @@
 package hasp
 
 import (
-	"github.com/aws/aws-sdk-go/service/lexruntimeservice"
+	"github.com/aws/aws-sdk-go-v2/service/lexruntimeservice"
 	"github.com/rmcsoft/hasp/events"
 	"github.com/rmcsoft/hasp/haspaws"
 	"github.com/rmcsoft/hasp/sound"
@@ -11,14 +11,16 @@ import (
 type processingState struct {
 	availableAnimations []string
 	currentAnimation    int
-	lrs                 *lexruntimeservice.LexRuntimeService
+	lrs                 *lexruntimeservice.Client
+	debug               bool
 }
 
 // NewProcessingState creates new ProcessingState
-func NewProcessingState(availableAnimations []string, lrs *lexruntimeservice.LexRuntimeService) State {
+func NewProcessingState(availableAnimations []string, lrs *lexruntimeservice.Client, debug bool) State {
 	return &processingState{
 		availableAnimations: availableAnimations,
 		lrs:                 lrs,
+		debug:               debug,
 	}
 }
 
@@ -31,8 +33,7 @@ func (s *processingState) Enter(ctx CharacterCtx, event events.Event) (events.Ev
 		ctx[CtxUserId] = u.String()
 		userId = ctx[CtxUserId]
 	}
-	ifDebug, ok := ctx["Debug"]
-	lexResponseSource, err := haspaws.NewLexEventSource(s.lrs, data.AudioData, userId.(string), ok && ifDebug.(bool))
+	lexResponseSource, err := haspaws.NewLexEventSource(s.lrs, data.AudioData, userId.(string), s.debug)
 	if err != nil {
 		panic(err)
 	}

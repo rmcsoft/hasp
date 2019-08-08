@@ -4,6 +4,7 @@ import "C"
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -12,15 +13,15 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/lexruntimeservice"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/lexruntimeservice"
 	"github.com/rmcsoft/hasp/events"
 	"github.com/rmcsoft/hasp/sound"
 )
 
 type awsLexRuntime struct {
 	eventChan          chan *events.Event
-	lrs                *lexruntimeservice.LexRuntimeService
+	lrs                *lexruntimeservice.Client
 	audioData          *sound.AudioData
 	repliedAudioFormat sound.AudioFormat
 	userId             string
@@ -28,7 +29,7 @@ type awsLexRuntime struct {
 }
 
 // NewLexEventSource creates LexEventSource
-func NewLexEventSource(lrs *lexruntimeservice.LexRuntimeService,
+func NewLexEventSource(lrs *lexruntimeservice.Client,
 	audioData *sound.AudioData, userId string, debug bool) (events.EventSource, error) {
 	h := &awsLexRuntime{
 		eventChan:          make(chan *events.Event),
@@ -54,23 +55,23 @@ func (h *awsLexRuntime) Events() chan *events.Event {
 func (h *awsLexRuntime) Close() {
 }
 
-func (h *awsLexRuntime) sendRequest() ([]byte, string, string, error) {
-	req, resp := h.lrs.PostContentRequest(&lexruntimeservice.PostContentInput{
-		BotAlias:    aws.String("Prod"),
-		BotName:     aws.String("HASPBot"),
-		ContentType: aws.String(h.audioData.Mime()),
-		UserId:      aws.String(h.userId),
-		InputStream: h.makeInputStream(),
-		Accept:      aws.String("audio/pcm"),
-	})
+func (h *awsLexRuntime) sendRequest() ([]byte, *lexruntimeservice.PostContentResponse, error) {
+	req := h.lrs.PostContentRequest(
+		&lexruntimeservice.PostContentInput{
+			BotAlias:    aws.String("Prod"),
+			BotName:     aws.String("HASPBot"),
+			ContentType: aws.String(h.audioData.Mime()),
+			UserId:      aws.String(h.userId),
+			InputStream: h.makeInputStream(),
+			Accept:      aws.String("audio/pcm"),
+		})
 
-	log.Debug("Send request to runtime.lex")
-	err := req.Send()
-
+	log.Debug("Sending request to runtime.lex")
+	resp, err := req.Send(context.TODO())
 	if err != nil {
 		log.Errorf("Failed to send request to runtime.lex: %v", err)
 
-		return nil, "Error", "Error", fmt.Errorf("Failed to send request to runtime.lex: %v", err)
+		return nil, nil, fmt.Errorf("Failed to send request to runtime.lex: %v", err)
 	}
 
 	log.Trace("Response runtime.lex: %v", resp)
@@ -83,13 +84,13 @@ func (h *awsLexRuntime) sendRequest() ([]byte, string, string, error) {
 
 	if resp.AudioStream == nil {
 		log.Errorf("Response from runtime.lex does not contain AudioStream")
-		return nil, "Error", "Error", fmt.Errorf("Response from runtime.lex does not contain AudioStream")
+		return nil, nil, fmt.Errorf("Response from runtime.lex does not contain AudioStream")
 	}
 
 	samples, err := ioutil.ReadAll(resp.AudioStream)
 	if err != nil || len(samples) == 0 {
 		log.Errorf("Unable to read audio data from the runtime.lex response")
-		return nil, "Error", "Error", fmt.Errorf("Unable to read audio data from the runtime.lex response")
+		return nil, nil, fmt.Errorf("Unable to read audio data from the runtime.lex response")
 	}
 
 	if h.debug {
@@ -99,31 +100,21 @@ func (h *awsLexRuntime) sendRequest() ([]byte, string, string, error) {
 		f.Write(samples)
 	}
 
-	intentName := "Error"
-	if resp.IntentName != nil {
-		intentName = *resp.IntentName
-	}
-
-	dialogState := "Error"
-	if resp.DialogState != nil {
-		dialogState = *resp.DialogState
-	}
-
-	return samples, intentName, dialogState, err
+	return samples, resp, err
 }
 
 func (h *awsLexRuntime) run() {
 	defer close(h.eventChan)
 
-	samples, intentName, dialogState, err := h.sendRequest()
+	samples, resp, err := h.sendRequest()
 	if err != nil {
 		// NOT-A-FIX! This workaround is here just to understand the problem better!
 		log.Info(" ===>>> Error appeared communicating with AWS! RETRYING!!!!!!")
-		samples, intentName, dialogState, err = h.sendRequest()
+		samples, resp, err = h.sendRequest()
 		if err != nil {
 			// NOT-A-FIX! This workaround is here just to understand the problem better!
 			log.Info(" ===>>> Error appeared AGAIN communicating with AWS! RETRYING ONCE AGAIN!!!!!!")
-			samples, intentName, dialogState, err = h.sendRequest()
+			samples, resp, err = h.sendRequest()
 			if err != nil {
 				log.Error(" ===>>> 3 errors already!!! Giving up")
 				h.gotStop(nil) // TODO: Reaction to an error
@@ -133,9 +124,14 @@ func (h *awsLexRuntime) run() {
 	}
 	repliedSpeech := sound.NewAudioData(h.repliedAudioFormat, samples)
 
-	log.Debug("GOT: Intent=", intentName, "; State=", dialogState)
+	if resp.IntentName == nil {
+		log.Debug("GOT: EMPTY Intent; State=", resp.DialogState)
+		h.gotReply(repliedSpeech)
+		return
+	}
 
-	switch intentName {
+	log.Debug("GOT: Intent=", *resp.IntentName, "; State=", resp.DialogState)
+	switch *resp.IntentName {
 	case "StopInteraction", "NoThankYou":
 		log.Debug("stopping...")
 		h.gotStop(repliedSpeech)
@@ -143,7 +139,7 @@ func (h *awsLexRuntime) run() {
 		log.Debug("stopping...")
 		h.gotStop(nil)
 	case "AxeOso", "Catawba", "Codescape", "DontKnowTheLastName", "Event", "Goodbye", "ThankYou", "TourSubscription", "TradeLore":
-		if dialogState == "Fulfilled" {
+		if resp.DialogState == "Fulfilled" {
 			log.Debug("stopping...")
 			h.gotStop(repliedSpeech)
 		} else {
@@ -155,10 +151,10 @@ func (h *awsLexRuntime) run() {
 		h.gotReply(repliedSpeech)
 
 	case "Meeting":
-		if dialogState == "ConfirmIntent" {
+		if resp.DialogState == "ConfirmIntent" {
 			log.Debug("meeting confirmation...")
 			h.gotConfirmation(repliedSpeech)
-		} else if dialogState == "Fulfilled" {
+		} else if resp.DialogState == "Fulfilled" {
 			log.Debug("meeting fullfilled...")
 			h.gotCall(repliedSpeech)
 		} else {

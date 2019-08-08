@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/rmcsoft/hasp/events"
+	"github.com/sirupsen/logrus"
 )
 
 // HotWordDetectedEventData is the HotWordDetectedEvent data
@@ -22,7 +23,10 @@ const (
 func NewHotWordDetectedEvent(audioData *AudioData) *events.Event {
 	typeName := HotWordWithDataDetectedEventName
 	if len(audioData.samples) == 0 {
+		logrus.Debug("HotWordDetected")
 		typeName = HotWordDetectedEventName
+	} else {
+		logrus.Debug("HotWordWithDataDetected")
 	}
 	return &events.Event{
 		Name: typeName,

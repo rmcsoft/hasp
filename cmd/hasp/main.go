@@ -18,10 +18,9 @@ import (
 	"github.com/rmcsoft/hasp/haspaws"
 	"github.com/rmcsoft/hasp/sound"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/lexruntimeservice"
+	"github.com/aws/aws-sdk-go-v2/aws/endpoints"
+	"github.com/aws/aws-sdk-go-v2/aws/external"
+	"github.com/aws/aws-sdk-go-v2/service/lexruntimeservice"
 	"github.com/jessevdk/go-flags"
 )
 
@@ -181,20 +180,24 @@ func makeHotWordDetector(opts options) *sound.HotWordDetector {
 	return hotWordDetector
 }
 
-func makeAwsSession(opts options) *session.Session {
-	awsSess, err := session.NewSession(&aws.Config{
-		Region:      aws.String("us-east-1"),
-		Credentials: credentials.NewStaticCredentials(opts.AwsID, opts.AwsSecret, ""),
-		LogLevel:    aws.LogLevel(aws.LogDebugWithRequestErrors),
-		Logger:      logrusProxy{},
-	})
+func makeAwsSession(opts options) *lexruntimeservice.Client {
+
+	cfg, err := external.LoadDefaultAWSConfig()
 
 	if err != nil {
-		log.Fatal(err)
+		panic("unable to load SDK config, " + err.Error())
+	}
+	cfg.Region = endpoints.UsEast1RegionID
+	cfg.Logger = logrusProxy{}
+
+	awsClient := lexruntimeservice.New(cfg)
+
+	if awsClient == nil {
+		log.Fatal("Failed to create AWS Lex client")
 	}
 
 	log.Info("AWS session started...")
-	return awsSess
+	return awsClient
 }
 
 func loadAudioData(fileName string) *sound.AudioData {
@@ -207,8 +210,7 @@ func loadAudioData(fileName string) *sound.AudioData {
 
 func makeCharacter(opts options) *hasp.Character {
 
-	awsSess := makeAwsSession(opts)
-	svc := lexruntimeservice.New(awsSess)
+	svc := makeAwsSession(opts)
 	soundPlayer := makeSoundPlayer(opts)
 	hotWordDetector := makeHotWordDetector(opts)
 
@@ -262,13 +264,13 @@ func makeCharacter(opts options) *hasp.Character {
 		"processing": hasp.NewProcessingState(
 			[]string{"silent"},
 			svc,
+			opts.Debug || opts.Trace,
 		),
 		"goodbye": hasp.NewSingleAniState(
 			"goodbye",
 		),
-		"call": hasp.NewProcessingState(
+		"call": hasp.NewTellsState(
 			[]string{"calls2"},
-			svc,
 		),
 		"tell-type": hasp.NewTellsState(
 			[]string{"tells"},
@@ -279,6 +281,10 @@ func makeCharacter(opts options) *hasp.Character {
 			soundPlayer,
 			inSound,
 			outSound,
+		),
+		"tell-msg-sent": hasp.NewTellsHelpState(
+			[]string{"tells"},
+			loadAudioData("../wavs/msg-sent.wav"),
 		),
 	}
 
@@ -341,11 +347,6 @@ func makeCharacter(opts options) *hasp.Character {
 			Dst:  "tells-aws",
 		},
 		hasp.EventDesc{
-			Name: haspaws.AwsRepliedEventName,
-			Src:  []string{"call"},
-			Dst:  "tells-aws",
-		},
-		hasp.EventDesc{
 			Name: haspaws.AwsRepliedTypeEventName,
 			Src:  []string{"processing"},
 			Dst:  "tell-type",
@@ -353,17 +354,22 @@ func makeCharacter(opts options) *hasp.Character {
 		hasp.EventDesc{
 			Name: sound.SoundCapturedEventName,
 			Src:  []string{"type"},
-			Dst:  "call",
+			Dst:  "processing",
 		},
 		hasp.EventDesc{
 			Name: haspaws.AwsRepliedCallEventName,
-			Src:  []string{"call"},
-			Dst:  "tells-bye",
+			Src:  []string{"processing"},
+			Dst:  "call",
 		},
 		hasp.EventDesc{
-			Name: haspaws.AwsRepliedTypeEventName,
+			Name: sound.SoundPlayedEventName,
 			Src:  []string{"call"},
-			Dst:  "tell-type",
+			Dst:  "tell-msg-sent",
+		},
+		hasp.EventDesc{
+			Name: sound.SoundPlayedEventName,
+			Src:  []string{"tell-msg-sent"},
+			Dst:  "idle",
 		},
 		hasp.EventDesc{
 			Name: sound.StopEventName,
