@@ -83,29 +83,29 @@ static Detector* newDetector(
     float sensitivity,
     EStr* estr)
 {
-       Detector* d = calloc(1, sizeof(Detector));
-       if (d == NULL) {
-        eprintf("Unable to alloc memmory for Detector");
-        return NULL;
-    }
+	Detector* d = calloc(1, sizeof(Detector));
+	if (d == NULL) {
+		eprintf("Unable to alloc memmory for Detector");
+		return NULL;
+	}
 
-       d->sampleRate = pv_sample_rate();
-       d->capDev = openCaptureDev(deviceName, d->sampleRate, estr);
-       if (d->capDev == NULL)
-           goto error;
+   d->sampleRate = pv_sample_rate();
+   d->capDev = openCaptureDev(deviceName, d->sampleRate, estr);
+   if (d->capDev == NULL)
+	   goto error;
 
-       if (modelPath != NULL && keywordPath != NULL)
-       {
-           d->porcupine = createPorcupine(modelPath, keywordPath, sensitivity, estr);
-           if (d->porcupine == NULL)
-               goto error;
-       }
+	if (modelPath != NULL && keywordPath != NULL)
+	{
+		d->porcupine = createPorcupine(modelPath, keywordPath, sensitivity, estr);
+		if (d->porcupine == NULL)
+			goto error;
+	}
 
-       return d;
+	return d;
 
 error:
-       destroyDetector(d);
-       return NULL;
+   destroyDetector(d);
+   return NULL;
 }
 
 static void resetPorcupine(Detector* d) {
@@ -117,10 +117,10 @@ static void resetPorcupine(Detector* d) {
 }
 
 static bool startSession(Detector* d, int32_t* stopFlagPtr, EStr* estr) {
-       bool retval = false;
-      snd_pcm_hw_params_t* params = NULL;
+    bool retval = false;
+    snd_pcm_hw_params_t* params = NULL;
     int rate = d->sampleRate;
-       int err;
+    int err;
 
        if ((err = snd_pcm_hw_params_malloc(&params)) < 0) {
            eprintf("Cannot allocate hardware parameter structure (%s, %d)", snd_strerror(err), err);
@@ -201,8 +201,8 @@ static int readSamples(Detector* d, int16_t* buf, int maxSampleCount, EStr* estr
        return -EINTR;
 }
 
-#define NOISE_THRESHOLD 13000
-#define NOISE_FRAMES 50
+#define NOISE_THRESHOLD 10000
+#define NOISE_FRAMES 30
 
 static short getMaxLoud(const int16_t* samples, int sampleCount) {
        int16_t max = 0;
@@ -239,96 +239,96 @@ static int waitHotWord(Detector* d, EStr* estr) {
 
 static int soundCapture(Detector* d, int16_t* outputBuffer, int maxSampleCount,
     int startSoundWaitFrames, EStr* estr, bool debug) {
-       const int bufSize = pv_porcupine_frame_length();
+    const int bufSize = pv_porcupine_frame_length();
 
-#define REC_BUFFERS_NUM (100)
-     int16_t buffers[REC_BUFFERS_NUM][bufSize];
+#define REC_BUFFERS_NUM (5)
+    int16_t buffers[REC_BUFFERS_NUM][bufSize];
     int currentBufferIndex = 0;
 
-       int16_t silenseSens = -1;
-       int currentBufferFill = 0;
-       int startSilenceFrames = 0;
-    memset(buffers, 0, REC_BUFFERS_NUM * bufSize * sizeof(int16_t));
-       while (notStopped(d)) {
-           int n = readSamples(d, buffers[currentBufferIndex], bufSize, estr);
-           if (n < 0)
-               return n;
+	int16_t silenseSens = -1;
+	int currentBufferFill = 0;
+	int startSilenceFrames = 0;
+	memset(buffers, 0, REC_BUFFERS_NUM * bufSize * sizeof(int16_t));
+	while (notStopped(d)) {
+	   int n = readSamples(d, buffers[currentBufferIndex], bufSize, estr);
+	   if (n < 0)
+		   return n;
 
-        if (n != bufSize) {
-            eprintf("Read %d samples, expected %d.", n, bufSize);
-               return -1;
-        }
+	if (n != bufSize) {
+		eprintf("Read %d samples, expected %d.", n, bufSize);
+		   return -1;
+	}
 
-           int16_t maxLoud = getMaxLoud(buffers[currentBufferIndex], n);
+	   int16_t maxLoud = getMaxLoud(buffers[currentBufferIndex], n);
 
-           if (n > maxSampleCount - currentBufferFill)
-               n = maxSampleCount - currentBufferFill;
-           if (silenseSens < 0) {
-               if (maxLoud > NOISE_THRESHOLD) {
-                if (debug) {
-                    printf("%d[", maxLoud); fflush(stdout);
-                }
+	   if (n > maxSampleCount - currentBufferFill)
+		   n = maxSampleCount - currentBufferFill;
+	   if (silenseSens < 0) {
+		   if (maxLoud > NOISE_THRESHOLD) {
+			if (debug) {
+				printf("%d[", maxLoud); fflush(stdout);
+			}
 
-                   silenseSens = NOISE_FRAMES;
-                {
-                    int i = 0;
-                       currentBufferIndex = (currentBufferIndex + 1) % REC_BUFFERS_NUM;
-                    for (i = 0; i < REC_BUFFERS_NUM; ++i) {
-                        int16_t *buffer = buffers[(currentBufferIndex + i) % REC_BUFFERS_NUM];
-                           memcpy(outputBuffer + i*bufSize, buffer, bufSize * sizeof(int16_t));
-                    }
-                }
-                   currentBufferFill = REC_BUFFERS_NUM * bufSize;
-               } else {
-                if (debug) {
-                       printf("?"); fflush(stdout);
-                   }
+			   silenseSens = NOISE_FRAMES;
+			{
+				int i = 0;
+				   currentBufferIndex = (currentBufferIndex + 1) % REC_BUFFERS_NUM;
+				for (i = 0; i < REC_BUFFERS_NUM; ++i) {
+					int16_t *buffer = buffers[(currentBufferIndex + i) % REC_BUFFERS_NUM];
+					   memcpy(outputBuffer + i*bufSize, buffer, bufSize * sizeof(int16_t));
+				}
+			}
+			   currentBufferFill = REC_BUFFERS_NUM * bufSize;
+		   } else {
+			if (debug) {
+				   printf("?"); fflush(stdout);
+			   }
 
-                   currentBufferIndex = (currentBufferIndex + 1) % REC_BUFFERS_NUM;
+			   currentBufferIndex = (currentBufferIndex + 1) % REC_BUFFERS_NUM;
 
-                   startSilenceFrames++;
-                   if (startSilenceFrames >= startSoundWaitFrames) {
-                       return 0;
-                   }
-               }
-           } else {
-               memcpy(outputBuffer + currentBufferFill, buffers[currentBufferIndex], n*sizeof(int16_t));
-               currentBufferFill += n;
+			   startSilenceFrames++;
+			   if (startSilenceFrames >= startSoundWaitFrames) {
+				   return 0;
+			   }
+		   }
+	   } else {
+		memcpy(outputBuffer + currentBufferFill, buffers[currentBufferIndex], n*sizeof(int16_t));
+		currentBufferFill += n;
 
-               if (maxLoud > NOISE_THRESHOLD) {
-                   if (silenseSens < NOISE_FRAMES) {
-                    if (debug) {
-                        printf("+"); fflush(stdout);
-                    }
+		if (maxLoud > NOISE_THRESHOLD) {
+		   if (silenseSens < NOISE_FRAMES) {
+			if (debug) {
+				printf("+"); fflush(stdout);
+			}
 
-                       silenseSens = NOISE_FRAMES;
-                   } else {
-                    if (debug) {
-                        printf("."); fflush(stdout);
-                    }
-                   }
-               } else {
-                if (debug) {
-                       printf("-"); fflush(stdout);
-                }
+			   silenseSens = NOISE_FRAMES;
+		   } else {
+			if (debug) {
+				printf("."); fflush(stdout);
+			}
+		   }
+		} else {
+		if (debug) {
+			   printf("-"); fflush(stdout);
+		}
 
-                   silenseSens--;
-                   if (silenseSens <= 0) {
-                    if (debug) {
-                           printf("]"); fflush(stdout);
-                    }
+		   silenseSens--;
+		   if (silenseSens <= 0) {
+			if (debug) {
+				   printf("]"); fflush(stdout);
+			}
 
-                       return currentBufferFill;
-                   }
-               }
-           }
+			   return currentBufferFill;
+		   }
+		}
+		}
 
-           if (currentBufferFill == maxSampleCount) {
-               return currentBufferFill;
-           }
-       }
+		if (currentBufferFill == maxSampleCount) {
+		return currentBufferFill;
+		}
+	}
 
-       return -EINTR;
+	return -EINTR;
 }
 
 static int detect(Detector* d, int16_t* buffer, int maxSampleCount, EStr* estr, bool debug) {
@@ -355,7 +355,7 @@ import (
 
 const (
 	recTime               = int64(time.Duration(10) * time.Second)
-	sensitivity           = 0.3
+	sensitivity           = 0.5
 	startSilenceFramesMax = 140
 )
 
@@ -488,7 +488,8 @@ func (d *HotWordDetector) runSession(session *hotWordDetectorSession) {
 		return
 	}
 
-	/*for session.notStopped() */{
+	/*for session.notStopped() */
+	{
 		switch session.mode {
 		case detectHotWordMode:
 			d.doDetectHotWord(session)

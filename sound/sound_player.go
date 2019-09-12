@@ -159,8 +159,8 @@ func (p *SoundPlayer) Play(audioData *AudioData) (events.EventSource, error) {
 		cptr := (*C.int16_t)(unsafe.Pointer(&samples[0]))
 		if !C.playback(p.dev, cptr, C.int(sampleCount), estr) {
 			// TODO:  Reaction to an error
-			err := fmt.Errorf("Playback failed: %v", estr)
-			log.Errorf("HotWordDetector: %v", err)
+			err := fmt.Errorf("playback failed: %v", estr)
+			log.Errorf("SoundPlayer: %v", err)
 		}
 		p.closeDev(false)
 		log.Info("SoundPlayer: StopPlay")
@@ -189,7 +189,7 @@ func (p *SoundPlayer) PlaySync(audioData *AudioData) {
 	estr := &C.EStr{}
 	p.dev = C.openDevice(C.CString(p.devName), C.uint(audioData.SampleRate()), estr)
 	if p.dev == nil {
-		fmt.Errorf("Could't open audio device for playback: %v", estr)
+		fmt.Errorf("could't open audio device for playback: %v", estr)
 		return
 	}
 
@@ -203,7 +203,7 @@ func (p *SoundPlayer) PlaySync(audioData *AudioData) {
 
 	cptr := (*C.int16_t)(unsafe.Pointer(&samples[0]))
 	if !C.playback(p.dev, cptr, C.int(sampleCount), estr) {
-		err := fmt.Errorf("Playback failed: %v", estr)
+		err := fmt.Errorf("playback failed: %v", estr)
 		log.Errorf("SoundPlayer: %v", err)
 	}
 	p.closeDev(false)

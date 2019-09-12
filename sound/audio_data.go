@@ -1,8 +1,6 @@
 package sound
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 	"io/ioutil"
 )
@@ -66,12 +64,14 @@ func LoadMonoS16LEFromPCM(fileName string, sampleRate int) (*AudioData, error) {
 	return NewMonoS16LE(sampleRate, samples), nil
 }
 
+/*
 // NewMonoS16LEFromInt16 creates new AudioData from []int16
 func NewMonoS16LEFromInt16(sampleRate int, samples []int16) *AudioData {
 	buffer := bytes.NewBuffer(make([]byte, 0, 2*len(samples)))
 	binary.Write(buffer, binary.LittleEndian, samples)
 	return NewMonoS16LE(sampleRate, buffer.Bytes())
 }
+*/
 
 // Samples gets samples
 func (a *AudioData) Samples() []byte {
