@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/krig/go-sox"
 	"image"
 	"io"
 	"io/ioutil"
@@ -189,6 +191,7 @@ func makeAwsSession(opts options) *lexruntimeservice.Client {
 	}
 	cfg.Region = endpoints.UsEast1RegionID
 	cfg.Logger = logrusProxy{}
+	cfg.LogLevel = aws.LogDebug
 
 	awsClient := lexruntimeservice.New(cfg)
 
@@ -234,7 +237,7 @@ func makeCharacter(opts options) *hasp.Character {
 				atmel.AtmelGpioPin{Number: opts.LeftSensorPin, Name: opts.LeftSensorPort},
 				atmel.AtmelGpioPin{Number: opts.RightSensorPin, Name: opts.RightSensorPort},
 			},
-			10 * time.Second,
+			10*time.Second,
 		),
 		"tells-fullhelp": hasp.NewTellsHelpState(
 			[]string{"tells"},
@@ -325,10 +328,9 @@ func makeCharacter(opts options) *hasp.Character {
 			Dst:  "processing",
 		},
 
-
 		hasp.EventDesc{
 			Name: sound.SoundPlayedEventName,
-			Src:  []string{"tells-help", "tells-aws", "tells-there", "tells-fullhelp" },
+			Src:  []string{"tells-help", "tells-aws", "tells-there", "tells-fullhelp"},
 			Dst:  "listens",
 		},
 		hasp.EventDesc{
@@ -447,6 +449,13 @@ func main() {
 	} else if opts.Debug {
 		log.SetLevel(log.DebugLevel)
 	}
+
+	// All libSoX applications must start by initializing the SoX library
+	if !sox.Init() {
+		log.Fatal("Failed to initialize SoX")
+	}
+	// Make sure to call Quit before terminating
+	defer sox.Quit()
 
 	character := makeCharacter(opts)
 	err = character.Run()

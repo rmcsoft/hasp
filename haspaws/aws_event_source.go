@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/krig/go-sox"
 	"io"
 	"io/ioutil"
 	"os"
@@ -58,7 +59,7 @@ func (h *awsLexRuntime) Close() {
 func (h *awsLexRuntime) sendRequest() ([]byte, *lexruntimeservice.PostContentResponse, error) {
 	req := h.lrs.PostContentRequest(
 		&lexruntimeservice.PostContentInput{
-			BotAlias:    aws.String("Prod"),
+			BotAlias:    aws.String("$LATEST"),
 			BotName:     aws.String("HASPBot"),
 			ContentType: aws.String(h.audioData.Mime()),
 			UserId:      aws.String(h.userId),
@@ -108,19 +109,24 @@ func (h *awsLexRuntime) run() {
 
 	samples, resp, err := h.sendRequest()
 	if err != nil {
-		// NOT-A-FIX! This workaround is here just to understand the problem better!
-		log.Info(" ===>>> Error appeared communicating with AWS! RETRYING!!!!!!")
-		samples, resp, err = h.sendRequest()
-		if err != nil {
+		log.Error(" ============ >>>>>>>>>>>> AWS error!!! Giving up.")
+		h.gotStop(nil) // TODO: Reaction to an error
+		return
+		/*
 			// NOT-A-FIX! This workaround is here just to understand the problem better!
-			log.Info(" ===>>> Error appeared AGAIN communicating with AWS! RETRYING ONCE AGAIN!!!!!!")
+			log.Info(" ===>>> Error appeared communicating with AWS! RETRYING!!!!!!")
 			samples, resp, err = h.sendRequest()
 			if err != nil {
-				log.Error(" ===>>> 3 errors already!!! Giving up")
-				h.gotStop(nil) // TODO: Reaction to an error
-				return
+				// NOT-A-FIX! This workaround is here just to understand the problem better!
+				log.Info(" ===>>> Error appeared AGAIN communicating with AWS! RETRYING ONCE AGAIN!!!!!!")
+				samples, resp, err = h.sendRequest()
+				if err != nil {
+					log.Error(" ===>>> 3 errors already!!! Giving up")
+					h.gotStop(nil) // TODO: Reaction to an error
+					return
+				}
 			}
-		}
+		*/
 	}
 	repliedSpeech := sound.NewAudioData(h.repliedAudioFormat, samples)
 
@@ -146,7 +152,7 @@ func (h *awsLexRuntime) run() {
 			log.Debug("reply...")
 			h.gotReply(repliedSpeech)
 		}
-	case "ContactAdvent", "HowCanIhelpYou", "Delivery", "Chatter", "NoNameMeeting", "NoNameDelivery", "RepeatPhoneNumber", "SmthUnclear", "Mistake", "WebsitePhoneNumber", "WhatIsYourName":
+	case "Company", "ContactAdvent", "HowCanIhelpYou", "Delivery", "Chatter", "NoNameMeeting", "NoNameDelivery", "RepeatPhoneNumber", "SmthUnclear", "Mistake", "WebsitePhoneNumber", "WhatIsYourName":
 		log.Debug("reply...")
 		h.gotReply(repliedSpeech)
 
@@ -183,16 +189,80 @@ func (h *awsLexRuntime) gotConfirmation(data *sound.AudioData) {
 	h.eventChan <- NewAwsRepliedEventState(data, AwsRepliedTypeEventName)
 }
 
+func preprocessSamplesWithSox(audioSamples []byte) []byte {
+	si := sox.NewSignalInfo(16000, 1, 16, uint64(len(audioSamples)), nil)
+
+	in := sox.OpenMemRead0(audioSamples, si, nil, "s16")
+	if in == nil {
+		log.Fatal("Failed to open memory buffer for reading")
+	}
+
+	// Set up the memory buffer for writing
+	buf := sox.NewMemstream()
+	defer buf.Release()
+	out := sox.OpenMemstreamWrite(buf, in.Signal(), nil, "s16")
+	if out == nil {
+		log.Fatal("Failed to open memory buffer")
+	}
+
+	// Create an effects chain: Some effects need to know about the
+	// input or output encoding so we provide that information here.
+	chain := sox.CreateEffectsChain(in.Encoding(), out.Encoding())
+	// Make sure to clean up!
+	defer chain.Release()
+
+	// The first effect in the effect chain must be something that can
+	// source samples; in this case, we use the built-in handler that
+	// inputs data from an audio file.
+	e := sox.CreateEffect(sox.FindEffect("input"))
+	e.Options(in)
+	// This becomes the first "effect" in the chain
+	chain.Add(e, in.Signal(), in.Signal())
+	e.Release()
+
+	// Create the `noisered' effect, and initialise it with the desired parameters:
+	e = sox.CreateEffect(sox.FindEffect("noisered"))
+	e.Options("noise.prof", "0.1")
+	// Add the effect to the end of the effects processing chain:
+	chain.Add(e, in.Signal(), in.Signal())
+	e.Release()
+
+	// Create the `gain' effect, and initialise it with some parameters:
+	e = sox.CreateEffect(sox.FindEffect("gain"))
+	e.Options("-B", "-n", "-3")
+	chain.Add(e, in.Signal(), in.Signal())
+	e.Release()
+
+	// The last effect in the effect chain must be something that only consumes
+	// samples; in this case, we use the built-in handler that outputs data.
+	e = sox.CreateEffect(sox.FindEffect("output"))
+	e.Options(out)
+	chain.Add(e, in.Signal(), in.Signal())
+	e.Release()
+
+	//var samples [MAX_SAMPLES]sox.Sample
+	//flow(in, out, samples[:])
+	// Flow samples through the effects processing chain until EOF is reached.
+	chain.Flow()
+
+	out.Release()
+	in.Release()
+
+	return buf.Bytes()
+}
+
 func (h *awsLexRuntime) makeInputStream() io.ReadSeeker {
-	samples := h.audioData.Samples()
+	audioSamples := h.audioData.Samples()
+
+	processedSamples := preprocessSamplesWithSox(audioSamples)
 
 	if h.debug {
 		t := time.Now()
 		f, _ := os.Create(fmt.Sprintf("./tmp/%v-sent.pcm", t.Format("20060102150405")))
 		defer f.Close()
-		f.Write(samples)
+		f.Write(processedSamples)
 	}
 
-	reader := bytes.NewReader(samples)
-	return aws.ReadSeekCloser(reader)
+	reader := bytes.NewReader(processedSamples)
+	return reader
 }
